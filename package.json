@@ -1,0 +1,43 @@
+{
+  "name": "library-checkout-app",
+  "version": "1.0.0",
+  "description": "A library management system for non-profits with educational source code viewing",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build": "electron-builder"
+  },
+  "keywords": [
+    "library",
+    "education",
+    "non-profit",
+    "electron",
+    "sqlite",
+    "books"
+  ],
+  "author": "Boys and Girls Club of Indianapolis",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^22.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "sql.js": "^1.8.0",
+    "sqlite3": "^5.1.7"
+  },
+  "build": {
+    "appId": "org.nonprofit.library-checkout",
+    "productName": "Library Checkout App",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!**/node_modules/*/{README,README.md,readme.md,CHANGELOG,LICENSE,.npmignore}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/.*"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+# Library Checkout App - Setup Guide
+
+## Prerequisites
+- Node.js (version 16 or higher)
+- npm (comes with Node.js)
+
+## Installation Steps
+
+1. **Create Project Folder**
+   ```bash
+   mkdir library-checkout-app
+   cd library-checkout-app

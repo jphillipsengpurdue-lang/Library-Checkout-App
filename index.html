@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<!-- 
+    KIDS LIBRARY CHECKOUT SYSTEM - User Interface
+    This file defines the visual structure and layout of the application.
+    It uses HTML for structure, CSS for styling, and connects to JavaScript for behavior.
+    
+    Educational Purpose: This demonstrates how modern web applications are built
+    with separation of concerns (HTML = structure, CSS = presentation, JS = behavior)
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Viewport tag ensures proper rendering on mobile devices -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids Library Checkout - Learn to Code!</title>
+    
+    <style>
+        /* 
+            GLOBAL STYLES - Applied to the entire application
+            These styles create the visual theme and layout foundation
+        */
+        body {
+            font-family: 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* 
+            MAIN CONTAINER - Centers content and provides card appearance
+            This creates the white background area where all content lives
+        */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+
+        /* 
+            HEADINGS - Create visual hierarchy with gradient text effect
+            The gradient text is a modern design technique using CSS
+        */
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        /* 
+            SECTION MANAGEMENT - Single Page Application technique
+            Only one section is visible at a time, creating app-like navigation
+        */
+        .section {
+            display: none;
+            padding: 25px;
+            border: 3px solid #e2e8f0;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            background: #f7fafc;
+        }
+
+        /* 
+            BUTTON STYLES - Interactive elements with hover effects
+            Buttons use CSS gradients and transitions for modern appearance
+        */
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 1em;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* 
+            BUTTON VARIANTS - Different colors for different actions
+            Color coding helps users understand button purposes
+        */
+        button.secondary {
+            background: linear-gradient(45deg, #48bb78, #38a169);
+        }
+
+        button.admin {
+            background: linear-gradient(45deg, #805ad5, #6b46c1);
+        }
+
+        button.learning {
+            background: linear-gradient(45deg, #4299e1, #3182ce);
+        }
+
+        /* 
+            FORM INPUTS - Styling for text fields and dropdowns
+            Consistent input styling creates professional appearance
+        */
+        input, select {
+            padding: 12px;
+            border: 2px solid #cbd5e0;
+            border-radius: 10px;
+            font-size: 1.1em;
+            margin: 8px 0;
+            width: 100%;
+            box-sizing: border-box;
+            font-family: 'Comic Sans MS', cursive;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* 
+            MESSAGE DISPLAYS - User feedback areas
+            Different colors communicate message types (success, error, info)
+        */
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 2px solid #48bb78;
+        }
+
+        .message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #f56565;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+
+        /* 
+            CONTENT CARDS - Reusable containers for books and users
+            Card-based design is modern and organizes information well
+        */
+        .checkout-item, .user-item {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        /* 
+            BOOK COVERS - Placeholder for book cover images
+            Flexbox layout ensures consistent sizing and alignment
+        */
+        .book-cover {
+            width: 60px;
+            height: 80px;
+            background: #f8f9fa;
+            border: 2px dashed #cbd5e0;
+            border-radius: 5px;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* 
+            ADMIN USER MANAGEMENT - Special styles for admin interface
+            These styles create the admin-specific user management UI
+        */
+        .user-type-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+            color: white;
+        }
+
+        .user-type-badge.admin {
+            background: #805ad5;
+        }
+
+        .user-type-badge.student {
+            background: #48bb78;
+        }
+
+        .password-field {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            font-size: 0.9em;
+        }
+
+        .toggle-password {
+            transition: all 0.3s ease;
+            margin-left: 8px;
+            background: none;
+            border: 1px solid #6c757d;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            padding: 4px 8px;
+            font-family: 'Comic Sans MS', cursive;
+        }
+
+        .toggle-password:hover {
+            background: #6c757d;
+            color: white;
+        }
+
+        /* 
+            SOURCE CODE VIEWER - Educational feature styling
+            Dark theme is standard for code editors and easier on the eyes
+        */
+        .source-file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .source-file-btn {
+            background: linear-gradient(45deg, #4a5568, #2d3748);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s ease;
+            font-family: 'Comic Sans MS', cursive;
+        }
+
+        .source-file-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(45deg, #2d3748, #1a202c);
+        }
+
+        .code-viewer {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            max-height: 500px;
+            overflow: auto;
+            margin: 20px 0;
+            border: 2px solid #2d3748;
+        }
+
+        /* 
+            INFORMATION PANELS - Highlighted content areas
+            Used for technology explanations and important information
+        */
+        .library-info {
+            background: #ebf8ff;
+            border: 2px solid #90cdf4;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        /* 
+            NAVIGATION LAYOUT - Grid-based button arrangements
+            CSS Grid creates responsive layouts that work on all screen sizes
+        */
+        .nav-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        /* 
+            RESPONSIVE DESIGN - Mobile-friendly adaptations
+            Media queries adjust layout for smaller screens
+        */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .section {
+                padding: 15px;
+            }
+            
+            .nav-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 
+        MAIN APPLICATION CONTAINER
+        This div wraps all content and provides the white background card
+        that contains the entire application interface.
+    -->
+    <div class="container">
+        <!-- 
+            APPLICATION HEADER 
+            Contains the main title and description that users see first.
+            The header establishes the app's identity and purpose.
+        -->
+        <header>
+            <h1>📚 Kids Library Checkout</h1>
+            <p style="text-align: center; color: #718096;">
+                Borrow books and learn how this app works!
+            </p>
+        </header>
+
+        <!-- 
+            LOGIN SECTION - Authentication Interface
+            This is the first screen users see. It handles user authentication
+            by collecting username and password credentials.
+        -->
+        <section id="loginSection" class="section">
+            <h2>🔐 Welcome to the Library!</h2>
+            <p>Please log in to start borrowing books:</p>
+            
+            <!-- 
+                LOGIN FORM - Collects user credentials
+                Uses form submission pattern but prevents default browser behavior
+                to handle submission with our custom JavaScript function.
+            -->
+            <form onsubmit="event.preventDefault(); login();">
+                <input type="text" id="loginUsername" placeholder="Enter your username" required>
+                <input type="password" id="loginPassword" placeholder="Enter your password" required>
+                
+                <div style="text-align: center; margin-top: 25px;">
+                    <button type="submit">Login</button>
+                    <button type="button" class="secondary" onclick="showSection('registerSection')">
+                        New User? Register Here
+                    </button>
+                </div>
+            </form>
+            
+            <!-- 
+                LOGIN MESSAGE DISPLAY - User feedback area
+                Shows success/error messages during login process
+            -->
+            <div id="loginMessage" class="message"></div>
+            
+            <!-- 
+                DEMO ACCOUNTS - Testing and educational information
+                Provides pre-made accounts for testing the application
+                without needing to register new users.
+            -->
+            <div style="background: #e6fffa; padding: 15px; border-radius: 10px; margin-top: 20px;">
+                <h3 style="margin-top: 0;">🧪 Demo Accounts:</h3>
+                <p><strong>Admin:</strong> username "admin", password "admin123"</p>
+                <p><strong>Student:</strong> Register a new account or use any username/password</p>
+            </div>
+        </section>
+
+        <!-- 
+            REGISTRATION SECTION - Account Creation
+            Allows new users to create student accounts in the system.
+            Registration is self-service for students.
+        -->
+        <section id="registerSection" class="section">
+            <h2>👤 Create Your Library Account</h2>
+            <p>Join our library community:</p>
+            
+            <!-- 
+                REGISTRATION FORM - New account creation
+                Collects username and password for new student accounts
+            -->
+            <form onsubmit="event.preventDefault(); register();">
+                <input type="text" id="regUsername" placeholder="Choose a username" required>
+                <input type="password" id="regPassword" placeholder="Choose a password" required>
+                
+                <div style="text-align: center; margin-top: 25px;">
+                    <button type="submit">Create Account</button>
+                    <button type="button" class="secondary" onclick="showSection('loginSection')">
+                        Back to Login
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Registration message display for user feedback -->
+            <div id="regMessage" class="message"></div>
+        </section>
+
+        <!-- 
+            WELCOME SECTION - Main Application Dashboard
+            Central hub that appears after successful login.
+            Provides navigation to all major application features.
+        -->
+        <section id="welcomeSection" class="section">
+            <h2>🎉 Hello, <span id="welcomeUsername"></span>!</h2>
+            <p>What would you like to do today?</p>
+            
+            <!-- 
+                MAIN NAVIGATION - Grid of action buttons
+                CSS Grid creates a responsive layout of buttons
+                that adapts to different screen sizes.
+            -->
+            <div class="nav-buttons">
+                <button onclick="showSection('checkoutSection')">📖 Check Out a Book</button>
+                <button class="secondary" onclick="loadMyCheckouts()">📚 View My Books</button>
+                <button class="learning" onclick="showSection('learnToCodeSection')">💻 Explore Source Code</button>
+                <button onclick="logout()">🚪 Logout</button>
+            </div>
+            
+            <!-- 
+                ADMIN BUTTON CONTAINER - Conditionally displayed
+                Only visible to users with admin privileges.
+                Demonstrates role-based access control in the UI.
+            -->
+            <div id="adminButtonContainer" style="display: none; margin-top: 20px; text-align: center;">
+                <button class="admin" onclick="showSection('adminSection')">👨‍💼 Admin Dashboard</button>
+            </div>
+        </section>
+
+        <!-- 
+            CHECKOUT SECTION - Book Borrowing Interface
+            Allows users to search for and borrow books using the Google Books API.
+            Demonstrates integration with external web services.
+        -->
+        <section id="checkoutSection" class="section">
+            <h2>📖 Check Out a Book</h2>
+            <p>Enter ISBN or book title to search:</p>
+            
+            <!-- 
+                BOOK SEARCH FORM - External API integration
+                Searches Google Books API and displays results
+                with checkout functionality.
+            -->
+            <form onsubmit="event.preventDefault(); searchBooks();">
+                <input type="text" id="bookSearchInput" placeholder="Enter ISBN or book title" autofocus>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="submit">🔍 Search Books</button>
+                    <button type="button" class="secondary" onclick="showSection('welcomeSection')">
+                        Back to Menu
+                    </button>
+                </div>
+            </form>
+            
+            <!-- 
+                SEARCH RESULTS CONTAINER - Dynamic content area
+                JavaScript will populate this div with book search results
+                demonstrating dynamic DOM manipulation.
+            -->
+            <div id="bookSearchResults" style="margin-top: 20px;">
+                <!-- Search results inserted dynamically by JavaScript -->
+            </div>
+            
+            <!-- Checkout process message display -->
+            <div id="checkoutMessage" class="message"></div>
+        </section>
+
+        <!-- 
+            MY CHECKOUTS SECTION - Personal Book History
+            Shows the current user's borrowed books and return history.
+            Demonstrates data retrieval and display from the database.
+        -->
+        <section id="myCheckoutsSection" class="section">
+            <h2>📚 My Checked Out Books</h2>
+            <div id="checkoutsList">
+                <!-- Checked out books inserted dynamically by JavaScript -->
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="showSection('welcomeSection')">Back to Menu</button>
+            </div>
+        </section>
+
+        <!-- 
+            LEARN TO CODE SECTION - Educational Feature
+            Teaches programming concepts by showing the app's source code.
+            This is the unique educational aspect of this library app.
+        -->
+        <section id="learnToCodeSection" class="section">
+            <h2>💻 Learn How This App Works!</h2>
+            <p>Explore the source code behind this application and learn about the technologies used:</p>
+            
+            <!-- 
+                TECHNOLOGY INFORMATION - Educational content
+                Explains the technical stack used to build the application.
+                Helps kids understand what technologies make the app work.
+            -->
+            <div class="library-info">
+                <h3>📚 Technologies Used:</h3>
+                <p><strong>Electron:</strong> Framework for building desktop apps with web technologies</p>
+                <p><strong>SQL.js:</strong> SQLite database that runs in the browser</p>
+                <p><strong>Google Books API:</strong> External API for book information</p>
+                <p><strong>HTML/CSS/JavaScript:</strong> Core web technologies for the interface</p>
+            </div>
+            
+            <h3>📁 Source Files:</h3>
+            <!-- 
+                SOURCE FILE SELECTION - Interactive learning
+                Allows users to view different parts of the application code.
+                Each button loads a different source file for examination.
+            -->
+            <div class="source-file-list">
+                <button class="source-file-btn" onclick="viewSourceFile('main.js')">
+                    🏗️ main.js<br><small>Backend & Database</small>
+                </button>
+                <button class="source-file-btn" onclick="viewSourceFile('renderer.js')">
+                    🎨 renderer.js<br><small>Frontend Logic</small>
+                </button>
+                <button class="source-file-btn" onclick="viewSourceFile('preload.js')">
+                    🌉 preload.js<br><small>Security Bridge</small>
+                </button>
+                <button class="source-file-btn" onclick="viewSourceFile('index.html')">
+                    📄 index.html<br><small>User Interface</small>
+                </button>
+            </div>
+            
+            <!-- 
+                SOURCE CODE VIEWER - Code display area
+                Initially hidden, appears when a source file is selected.
+                Shows syntax-highlighted source code for educational purposes.
+            -->
+            <div id="sourceCodeViewer" style="display: none;">
+                <h3 id="currentFileTitle">Source Code</h3>
+                <div class="code-viewer" id="sourceCodeContent">
+                    <!-- Source code displayed here when file is selected -->
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button onclick="hideSourceViewer()">← Back to File List</button>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="showSection('welcomeSection')">Back to Main Menu</button>
+            </div>
+        </section>
+
+        <!-- 
+            ADMIN DASHBOARD SECTION - Administrative Controls
+            Restricted access area for system management.
+            Demonstrates role-based access control in practice.
+        -->
+        <section id="adminSection" class="section">
+            <h2>📊 Admin Dashboard</h2>
+            <p>Welcome, Administrator! Manage the library system:</p>
+            
+            <!-- 
+                ADMIN MESSAGE DISPLAY - Management feedback
+                Shows success/error messages for admin operations
+            -->
+            <div id="adminMessage" class="message"></div>
+            
+            <!-- 
+                ADMIN NAVIGATION - Management tools access
+                Provides buttons to access different admin functions
+            -->
+            <div class="nav-buttons">
+                <button class="admin" onclick="loadAllUsers()">👥 Manage Users</button>
+                <button class="admin" onclick="loadAllCheckouts()">📚 View All Checkouts</button>
+                <button class="admin" onclick="showBookManagement()">📖 Manage Books</button>
+                <button onclick="showSection('welcomeSection')">Back to User View</button>
+                <button onclick="logout()">Logout</button>
+            </div>
+            
+            <!-- 
+                DEBUG INFORMATION - Development and troubleshooting
+                Shows technical information helpful for debugging.
+                Can be enabled/disabled as needed.
+            -->
+            <div id="adminDebug" style="margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; display: none;">
+                <strong>Debug Info:</strong>
+                <div id="debugContent"></div>
+            </div>
+        </section>
+
+        <!-- 
+            MANAGE USERS SECTION - User Administration
+            Allows admins to view, modify, and delete user accounts.
+            Demonstrates CRUD (Create, Read, Update, Delete) operations.
+        -->
+        <section id="manageUsersSection" class="section">
+            <h2>👥 Manage Users</h2>
+            <div id="usersList">
+                <!-- User list inserted dynamically by JavaScript -->
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="showSection('adminSection')">Back to Admin Dashboard</button>
+            </div>
+        </section>
+
+        <!-- 
+            ALL CHECKOUTS SECTION - Library-wide Activity
+            Shows all book checkouts across all users.
+            Admin view of complete library borrowing activity.
+        -->
+        <section id="allCheckoutsSection" class="section">
+            <h2>📚 All Checked Out Books</h2>
+            <div id="allCheckoutsList">
+                <!-- All checkouts inserted dynamically by JavaScript -->
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="showSection('adminSection')">Back to Admin Dashboard</button>
+            </div>
+        </section>
+
+        <!-- 
+            BOOK MANAGEMENT SECTION - Administrative Book Search
+            Allows admins to search and view book information.
+            Similar to student search but with admin context.
+        -->
+        <section id="bookManagementSection" class="section">
+            <h2>📖 Book Management</h2>
+            <p>Search and manage books in the library:</p>
+            
+            <!-- Admin book search form -->
+            <form onsubmit="event.preventDefault(); adminSearchBooks();">
+                <input type="text" id="adminBookSearch" placeholder="Search by ISBN, title, or author" autofocus>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button type="submit">🔍 Search Books</button>
+                    <button type="button" onclick="showSection('adminSection')">Back to Admin Dashboard</button>
+                </div>
+            </form>
+            
+            <!-- Admin book search results container -->
+            <div id="adminBookResults" style="margin-top: 20px;">
+                <!-- Admin book results inserted dynamically by JavaScript -->
+            </div>
+        </section>
+    </div>
+
+    <!-- 
+        JAVASCRIPT BEHAVIOR LAYER - Application Logic
+        Links to the renderer.js file that contains all interactive functionality.
+        
+        Educational Note: This separation follows the software engineering
+        principle of separation of concerns:
+        - HTML defines structure (WHAT)
+        - CSS defines presentation (HOW IT LOOKS)  
+        - JavaScript defines behavior (HOW IT WORKS)
+    -->
+    <script src="renderer.js"></script>
+</body>
+</html>
