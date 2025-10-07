@@ -20,7 +20,7 @@
             These styles create the visual theme and layout foundation
         */
         body {
-            font-family: 'Comic Sans MS', cursive;
+            font-family: 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: 0;
             padding: 20px;
@@ -68,6 +68,57 @@
         }
 
         /* 
+            CARD-BASED NAVIGATION - Modern card layout for main menu
+            CSS Grid creates responsive layout of function cards
+        */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+
+        /* 
+            FUNCTION CARDS - Interactive cards that replace traditional buttons
+            Each card represents a different application feature
+        */
+        .function-card {
+            background: white;
+            border: 3px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 30px 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .function-card:hover {
+            transform: translateY(-5px);
+            border-color: #4ecdc4;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .function-card .icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .function-card h3 {
+            margin: 0 0 0.75rem 0;
+            font-size: 1.4rem;
+            color: #2d3748;
+        }
+
+        .function-card p {
+            margin: 0;
+            color: #718096;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        /* 
             BUTTON STYLES - Interactive elements with hover effects
             Buttons use CSS gradients and transitions for modern appearance
         */
@@ -80,7 +131,7 @@
             cursor: pointer;
             margin: 5px;
             transition: all 0.3s ease;
-            font-family: 'Comic Sans MS', cursive;
+            font-family: inherit;
             font-size: 1em;
         }
 
@@ -117,7 +168,7 @@
             margin: 8px 0;
             width: 100%;
             box-sizing: border-box;
-            font-family: 'Comic Sans MS', cursive;
+            font-family: inherit;
         }
 
         input:focus, select:focus {
@@ -226,7 +277,7 @@
             cursor: pointer;
             font-size: 0.8em;
             padding: 4px 8px;
-            font-family: 'Comic Sans MS', cursive;
+            font-family: inherit;
         }
 
         .toggle-password:hover {
@@ -254,7 +305,7 @@
             cursor: pointer;
             text-align: left;
             transition: all 0.3s ease;
-            font-family: 'Comic Sans MS', cursive;
+            font-family: inherit;
         }
 
         .source-file-btn:hover {
@@ -314,7 +365,25 @@
                 padding: 15px;
             }
             
+            .card-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                margin: 25px 0;
+            }
+            
+            .function-card {
+                padding: 20px 15px;
+            }
+            
+            .function-card .icon {
+                font-size: 2.5rem;
+            }
+            
             .nav-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .source-file-list {
                 grid-template-columns: 1fr;
             }
         }
@@ -415,31 +484,73 @@
         <!-- 
             WELCOME SECTION - Main Application Dashboard
             Central hub that appears after successful login.
-            Provides navigation to all major application features.
+            Provides navigation to all major application features using card-based design.
         -->
         <section id="welcomeSection" class="section">
             <h2>🎉 Hello, <span id="welcomeUsername"></span>!</h2>
             <p>What would you like to do today?</p>
             
             <!-- 
-                MAIN NAVIGATION - Grid of action buttons
-                CSS Grid creates a responsive layout of buttons
-                that adapts to different screen sizes.
+                CARD-BASED NAVIGATION - Modern card layout
+                CSS Grid creates responsive layout of function cards
+                that provide intuitive access to all application features
             -->
-            <div class="nav-buttons">
-                <button onclick="showSection('checkoutSection')">📖 Check Out a Book</button>
-                <button class="secondary" onclick="loadMyCheckouts()">📚 View My Books</button>
-                <button class="learning" onclick="showSection('learnToCodeSection')">💻 Explore Source Code</button>
-                <button onclick="logout()">🚪 Logout</button>
+            <div class="card-grid">
+                <!-- 
+                    CHECKOUT CARD - Book borrowing functionality
+                    Provides access to the book search and checkout system
+                -->
+                <div class="function-card" onclick="showSection('checkoutSection')">
+                    <span class="icon">📖</span>
+                    <h3>Check Out a Book</h3>
+                    <p>Search for and borrow new books from our library collection</p>
+                </div>
+                
+                <!-- 
+                    MY BOOKS CARD - Personal library management
+                    Shows currently checked out books and reading history
+                -->
+                <div class="function-card" onclick="loadMyCheckouts()">
+                    <span class="icon">📚</span>
+                    <h3>View My Books</h3>
+                    <p>See your currently checked out books and reading history</p>
+                </div>
+                
+                <!-- 
+                    LEARN CODE CARD - Educational feature
+                    Provides access to the source code exploration feature
+                -->
+                <div class="function-card" onclick="showSection('learnToCodeSection')">
+                    <span class="icon">💻</span>
+                    <h3>Explore Source Code</h3>
+                    <p>Learn how this application works by exploring the code behind it</p>
+                </div>
+                
+                <!-- 
+                    LOGOUT CARD - Session management
+                    Allows users to securely log out of the application
+                -->
+                <div class="function-card" onclick="logout()">
+                    <span class="icon">🚪</span>
+                    <h3>Logout</h3>
+                    <p>Securely log out of your library account</p>
+                </div>
             </div>
             
             <!-- 
-                ADMIN BUTTON CONTAINER - Conditionally displayed
+                ADMIN CARDS CONTAINER - Conditionally displayed
                 Only visible to users with admin privileges.
                 Demonstrates role-based access control in the UI.
             -->
-            <div id="adminButtonContainer" style="display: none; margin-top: 20px; text-align: center;">
-                <button class="admin" onclick="showSection('adminSection')">👨‍💼 Admin Dashboard</button>
+            <div id="adminCards" style="display: none; margin-top: 30px;">
+                <h3 style="text-align: center; color: #805ad5;">Administrator Tools</h3>
+                <div class="card-grid">
+                    <div class="function-card" onclick="showSection('adminSection')">
+                        <span class="icon">👨‍💼</span>
+                        <h3>Admin Dashboard</h3>
+                        <p>Access system administration and management tools</p>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -564,6 +675,11 @@
             Restricted access area for system management.
             Demonstrates role-based access control in practice.
         -->
+        <!-- 
+            ADMIN DASHBOARD SECTION - Administrative Controls
+            Restricted access area for system management.
+            Demonstrates role-based access control in practice.
+        -->
         <section id="adminSection" class="section">
             <h2>📊 Admin Dashboard</h2>
             <p>Welcome, Administrator! Manage the library system:</p>
@@ -575,15 +691,60 @@
             <div id="adminMessage" class="message"></div>
             
             <!-- 
-                ADMIN NAVIGATION - Management tools access
-                Provides buttons to access different admin functions
+                ADMIN CARD-BASED NAVIGATION - Modern card layout
+                CSS Grid creates responsive layout of admin function cards
+                that provide intuitive access to all administrative features
             -->
-            <div class="nav-buttons">
-                <button class="admin" onclick="loadAllUsers()">👥 Manage Users</button>
-                <button class="admin" onclick="loadAllCheckouts()">📚 View All Checkouts</button>
-                <button class="admin" onclick="showBookManagement()">📖 Manage Books</button>
-                <button onclick="showSection('welcomeSection')">Back to User View</button>
-                <button onclick="logout()">Logout</button>
+            <div class="card-grid">
+                <!-- 
+                    MANAGE USERS CARD - User administration
+                    Provides access to user management and account controls
+                -->
+                <div class="function-card" onclick="loadAllUsers()">
+                    <span class="icon">👥</span>
+                    <h3>Manage Users</h3>
+                    <p>View, edit, and manage all library user accounts and permissions</p>
+                </div>
+                
+                <!-- 
+                    VIEW CHECKOUTS CARD - Library activity monitoring
+                    Shows all book checkouts across the entire library system
+                -->
+                <div class="function-card" onclick="loadAllCheckouts()">
+                    <span class="icon">📚</span>
+                    <h3>View All Checkouts</h3>
+                    <p>Monitor all book borrowing activity across the entire library</p>
+                </div>
+                
+                <!-- 
+                    MANAGE BOOKS CARD - Collection management
+                    Provides tools for book search and collection management
+                -->
+                <div class="function-card" onclick="showBookManagement()">
+                    <span class="icon">📖</span>
+                    <h3>Manage Books</h3>
+                    <p>Search and manage the library's book collection and inventory</p>
+                </div>
+                
+                <!-- 
+                    USER VIEW CARD - Return to standard interface
+                    Allows admins to switch back to the regular user view
+                -->
+                <div class="function-card" onclick="showSection('welcomeSection')">
+                    <span class="icon">👤</span>
+                    <h3>User View</h3>
+                    <p>Return to the standard library interface as a regular user</p>
+                </div>
+                
+                <!-- 
+                    LOGOUT CARD - Session management
+                    Allows administrators to securely log out of the system
+                -->
+                <div class="function-card" onclick="logout()">
+                    <span class="icon">🚪</span>
+                    <h3>Logout</h3>
+                    <p>Securely log out of the administrator account</p>
+                </div>
             </div>
             
             <!-- 
@@ -664,4 +825,5 @@
     -->
     <script src="renderer.js"></script>
 </body>
+</html>
 </html>
