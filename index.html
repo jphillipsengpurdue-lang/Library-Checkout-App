@@ -451,7 +451,40 @@
                 <p><strong>Student:</strong> Register a new account or use any username/password</p>
             </div>
         </section>
-
+	<!-- WORD HELPER SECTION -->
+	<section id="wordHelperSection" class="section">
+    	    <h2>📖 Word Helper</h2>
+    	    <p>Get help with word pronunciation and definitions while you read!</p>
+    
+    	    <div style="text-align: center; margin: 20px 0;">
+        	<input type="text" id="wordInput" placeholder="Enter a word you need help with..." 
+               	    style="padding: 12px; width: 300px; border: 2px solid #cbd5e0; border-radius: 10px; font-size: 1.1em;">
+        	<button onclick="getWordHelp()" class="learning" style="margin-left: 10px;">Get Help</button>
+    	    </div>
+    
+    	    <div id="wordHelpResult" style="margin-top: 20px;">
+        	<!-- Word help will appear here -->
+    	    </div>
+    
+    	    <div style="text-align: center; margin-top: 20px;">
+                <button onclick="showSection('welcomeSection')">Back to Menu</button>
+    	    </div>
+	</section>
+	<!-- This is the quick word help section -->
+	<div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #ffeaa7;">
+    	    <h3 style="margin-bottom: 0;">📖 Quick Word Helper</h3>
+    	    <p><small>Get help with any word while you're here!</small></p>
+    	    <div style="display: flex; gap: 10px;">
+        	<input type="text" id="quickWordInput" placeholder="Enter any word..." 
+               	    style="flex-grow: 1; padding: 8px; border: 2px solid #cbd5e0; border-radius: 5px;">
+        	<button onclick="quickWordHelp()" style="background: #4299e1; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+            	    Get Help
+        	</button>
+    	    </div>
+    	    <div id="quickWordResult" style="margin-bottom: 10px;">
+                <!-- Word help will appear here -->
+            </div>
+        </div>
         <!-- 
             REGISTRATION SECTION - Account Creation
             Allows new users to create student accounts in the system.
@@ -525,6 +558,11 @@
                     <h3>Explore Source Code</h3>
                     <p>Learn how this application works by exploring the code behind it</p>
                 </div>
+                <div class="function-card" onclick="showSection('wordHelperSection')">
+                    <span class="icon"></span>
+                    <h3>Word Helper</h3>
+                    <p>Learn new word you need help with</p>
+                </div>
                 
                 <!-- 
                     LOGOUT CARD - Session management
@@ -536,7 +574,7 @@
                     <p>Securely log out of your library account</p>
                 </div>
             </div>
-            
+     
             <!-- 
                 ADMIN CARDS CONTAINER - Conditionally displayed
                 Only visible to users with admin privileges.
@@ -825,5 +863,4 @@
     -->
     <script src="renderer.js"></script>
 </body>
-</html>
 </html>
