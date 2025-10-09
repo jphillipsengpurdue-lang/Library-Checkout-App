@@ -57,37 +57,35 @@ function testAdminFunctions() {
  * This creates a single-page application experience
  */
 function showSection(sectionId) {
-    // First hide all sections to ensure only one is visible
-    document.querySelectorAll('.section').forEach(section => {
+    // Hide all sections
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(section => {
         section.style.display = 'none';
     });
     
-    // Then show the requested section
+    // Show the requested section
     const targetSection = document.getElementById(sectionId);
     if (targetSection) {
         targetSection.style.display = 'block';
     }
     
-    // Special setup for sections that need extra initialization
-    if (sectionId === 'checkoutSection') {
-        // Focus on search input for better user experience
-        setTimeout(() => {
-            const searchInput = document.getElementById('bookSearchInput');
-            if (searchInput) searchInput.focus();
-        }, 100);
-    }
+    // Update navigation visibility based on current section
+    const loggedInNav = document.getElementById('loggedInNav');
+    const loggedInUserMenu = document.getElementById('loggedInUserMenu');
+    const loggedOutNav = document.getElementById('loggedOutNav');
     
-    // Show admin button only if current user is an admin
-    const adminButtonContainer = document.getElementById('adminButtonContainer');
-    if (adminButtonContainer) {
-        if (currentUser && currentUser.userType === 'admin') {
-            adminButtonContainer.style.display = 'block';
-        } else {
-            adminButtonContainer.style.display = 'none';
-        }
+    const isLoggedInSection = sectionId !== 'loginSection' && sectionId !== 'registerSection';
+    
+    if (isLoggedInSection) {
+        loggedInNav.style.display = 'flex';
+        loggedInUserMenu.style.display = 'flex';
+        loggedOutNav.style.display = 'none';
+    } else {
+        loggedInNav.style.display = 'none';
+        loggedInUserMenu.style.display = 'none';
+        loggedOutNav.style.display = 'block';
     }
 }
-
 /**
  * SHOW MESSAGE: Display feedback messages to the user
  * Different types: success (green), error (red), info (blue)
@@ -837,6 +835,179 @@ async function adminReturnBook(checkoutId) {
         showMessage('adminMessage', 'Error deleting checkout: ' + error.message, 'error');
     }
 }
+/**
+ * Quick word helper for login page - UPDATED FOR NEW FORMAT
+ */
+async function quickWordHelp() {
+    const word = document.getElementById('quickWordInput').value.trim();
+    
+    if (!word) {
+        const container = document.getElementById('quickWordResult');
+        container.innerHTML = '<p style="color: #e53e3e;">Please enter a word</p>';
+        return;
+    }
+    
+    try {
+        const container = document.getElementById('quickWordResult');
+        container.innerHTML = '<p>🔍 Looking up word...</p>';
+        
+        const result = await window.electronAPI.getWordHelp(word);
+        console.log('Word help result:', result); // Debug log
+        
+        if (result.success) {
+            // Check if we have meanings in the new format
+            const hasMeanings = result.meanings && result.meanings.length > 0;
+            
+            container.innerHTML = `
+                <div style="background: #e6fffa; padding: 15px; border-radius: 5px; border: 1px solid #81e6d9;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div>
+                            <strong style="font-size: 1.3em;">${result.word}</strong> 
+                            ${result.phonetic ? `<br><small style="color: #666;">Pronunciation: ${result.phonetic}</small>` : ''}
+                        </div>
+                        <div>
+                            <button onclick="speakWord('${result.word.replace(/'/g, "\\'")}')" 
+                                    style="background: #4299e1; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; margin-left: 5px;">
+                                🔊 Speak
+                            </button>
+                            ${result.audio ? `
+                                <button onclick="playAudio('${result.audio}')" 
+                                        style="background: #48bb78; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; margin-left: 5px;">
+                                    🎵 Audio
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    ${hasMeanings ? `
+                        <div style="background: white; padding: 10px; border-radius: 3px;">
+                            <strong>Definitions:</strong>
+                            ${result.meanings.map(meaning => `
+                                <div style="margin: 8px 0; padding: 5px; border-left: 3px solid #4299e1;">
+                                    <em style="color: #667eea; font-style: italic;">${meaning.partOfSpeech}</em>
+                                    <div style="margin-top: 3px;">${meaning.definition}</div>
+                                </div>
+                            `).join('')}
+                            <small style="color: #666; display: block; margin-top: 8px;">Source: ${result.source}</small>
+                        </div>
+                    ` : `
+                        <div style="background: #fff3cd; padding: 10px; border-radius: 3px; border: 1px solid #ffeaa7;">
+                            <p style="margin: 0; color: #856404;">Definition not available, but you can still hear the pronunciation!</p>
+                        </div>
+                    `}
+                </div>
+            `;
+            
+            // Auto-speak the word after a short delay
+            setTimeout(() => speakWord(result.word), 800);
+            
+        } else {
+            container.innerHTML = `
+                <div style="background: #fed7d7; padding: 15px; border-radius: 5px; border: 1px solid #feb2b2;">
+                    <p style="color: #742a2a; margin: 0 0 10px 0;">${result.error}</p>
+                    <button onclick="speakWord('${word.replace(/'/g, "\\'")}')" 
+                            style="background: #4299e1; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">
+                        🔊 Speak "${word}" anyway
+                    </button>
+                </div>
+            `;
+        }
+    } catch (error) {
+        const container = document.getElementById('quickWordResult');
+        container.innerHTML = `
+            <div style="background: #fed7d7; padding: 15px; border-radius: 5px; border: 1px solid #feb2b2;">
+                <p style="color: #742a2a; margin: 0 0 10px 0;">Error: ${error.message}</p>
+                <button onclick="speakWord('${word.replace(/'/g, "\\'")}')" 
+                        style="background: #4299e1; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">
+                    🔊 Speak "${word}" anyway
+                </button>
+            </div>
+        `;
+    }
+}
+/**
+ * Text-to-speech function - FIXED VERSION
+ */
+function speakWord(word) {
+    if (!word) return;
+    
+    console.log(`🔊 Attempting to speak: "${word}"`);
+    
+    // Check if browser supports speech synthesis
+    if ('speechSynthesis' in window) {
+        // Stop any current speech
+        window.speechSynthesis.cancel();
+        
+        // Create speech request
+        const utterance = new SpeechSynthesisUtterance(word);
+        
+        // Configure voice settings for clear pronunciation
+        utterance.rate = 0.8; // Slower for clarity
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        
+        // Get available voices
+        const voices = window.speechSynthesis.getVoices();
+        console.log('Available voices:', voices.length);
+        
+        // Try to use a clear English voice
+        const englishVoice = voices.find(voice => 
+            voice.lang.startsWith('en') && voice.name.includes('Female')
+        ) || voices.find(voice => voice.lang.startsWith('en'));
+        
+        if (englishVoice) {
+            utterance.voice = englishVoice;
+            console.log(`Using voice: ${englishVoice.name}`);
+        }
+        
+        // Add event listeners for debugging
+        utterance.onstart = () => console.log('🎵 Speech started');
+        utterance.onend = () => console.log('🎵 Speech ended');
+        utterance.onerror = (event) => console.error('🎵 Speech error:', event.error);
+        
+        // Speak the word
+        window.speechSynthesis.speak(utterance);
+        
+    } else {
+        console.error('❌ Text-to-speech not supported');
+        alert('Text-to-speech not supported in this browser.');
+    }
+}
+
+/**
+ * Play audio from URL
+ */
+function playAudio(audioUrl) {
+    console.log(`🎵 Playing audio from: ${audioUrl}`);
+    const audio = new Audio(audioUrl);
+    audio.play().catch(error => {
+        console.error('❌ Audio playback failed:', error);
+        alert('Could not play audio. Trying text-to-speech instead.');
+        // Extract word from URL or use the displayed word
+        const wordElement = document.querySelector('#quickWordResult strong');
+        if (wordElement) {
+            speakWord(wordElement.textContent);
+        }
+    });
+}
+
+/**
+ * Initialize speech synthesis
+ */
+function initSpeechSynthesis() {
+    if ('speechSynthesis' in window) {
+        // Load voices
+        const loadVoices = () => {
+            const voices = window.speechSynthesis.getVoices();
+            console.log(`✅ ${voices.length} speech voices loaded`);
+        };
+        
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices(); // Initial load
+    } else {
+        console.error('❌ Speech synthesis not supported');
+    }
+}
 // =============================================================================
 // ADMIN FUNCTIONS - Book management (admin only)
 // =============================================================================
@@ -1134,7 +1305,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    document.addEventListener('DOMContentLoaded', function() {
+    	// Start with login section
+    	showSection('loginSection');
     
+   	 // Initialize speech synthesis
+    	initSpeechSynthesis();
+    
+    	// ... rest of your existing DOMContentLoaded code ...
+    });
     console.log('✅ Renderer script loaded successfully');
     debugLog('Application initialized');
 });
