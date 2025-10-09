@@ -126,11 +126,51 @@ function createTables() {
                     return;
                 }
                 console.log('✅ Checkouts table ready');
-                
-                // Create default admin account
-                createDefaultAdmin()
-                    .then(() => resolve())
-                    .catch(err => reject(err));
+
+                // Create reading sessions table
+                db.run(`
+                    CREATE TABLE IF NOT EXISTS reading_sessions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        end_time DATETIME,
+                        duration_minutes INTEGER,
+                        book_title TEXT,
+                        pages_read INTEGER,
+                        FOREIGN KEY (user_id) REFERENCES users (id)
+                    )
+                `, (err) => {
+                    if (err) {
+                        console.error('❌ Error creating reading_sessions table:', err.message);
+                    } else {
+                        console.log('✅ Reading sessions table ready');
+                    }
+                });
+
+                // Create reading goals table
+                db.run(`
+                    CREATE TABLE IF NOT EXISTS reading_goals (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        goal_type TEXT NOT NULL,
+                        target_minutes INTEGER NOT NULL,
+                        start_date DATE NOT NULL,
+                        end_date DATE NOT NULL,
+                        completed BOOLEAN DEFAULT 0,
+                        FOREIGN KEY (user_id) REFERENCES users (id)
+                    )
+                `, (err) => {
+                    if (err) {
+                        console.error('❌ Error creating reading_goals table:', err.message);
+                    } else {
+                        console.log('✅ Reading goals table ready');
+                    }
+                    
+                    // Create default admin account
+                    createDefaultAdmin()
+                        .then(() => resolve())
+                        .catch(err => reject(err));
+                });
             });
         });
     });
@@ -206,102 +246,6 @@ function makeHttpsRequest(url) {
         });
     });
 }
-
-/**
- * BOOK SEARCH: Query Google Books API using Node.js https module
- */
-ipcMain.handle('search-books', async (event, query) => {
-    try {
-        console.log(`🔍 Searching books for: "${query}"`);
-        
-        if (!query || query.trim().length === 0) {
-            console.log('❌ Empty search query');
-            return [];
-        }
-
-        const cleanQuery = query.trim();
-        const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=15&printType=books`;
-        
-        const data = await makeHttpsRequest(apiUrl);
-        
-        console.log(`📊 API response - Total items: ${data.totalItems || 0}`);
-        
-        if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
-            console.log(`📭 No books found in API response for: "${query}"`);
-            return [];
-        }
-        
-        console.log(`✅ Found ${data.items.length} items in API response`);
-        
-        // Process each book
-        const books = [];
-        
-        for (const item of data.items) {
-            try {
-                const volumeInfo = item.volumeInfo || {};
-                
-                // Skip items without basic info
-                if (!volumeInfo.title) {
-                    continue;
-                }
-                
-                // Extract ISBN
-                let isbn = 'No ISBN';
-                if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
-                    const isbn13 = volumeInfo.industryIdentifiers.find(id => id.type === 'ISBN_13');
-                    const isbn10 = volumeInfo.industryIdentifiers.find(id => id.type === 'ISBN_10');
-                    isbn = (isbn13 || isbn10 || volumeInfo.industryIdentifiers[0])?.identifier || 'No ISBN';
-                }
-                
-                // Extract cover image
-                let coverUrl = null;
-                if (volumeInfo.imageLinks) {
-                    coverUrl = volumeInfo.imageLinks.thumbnail || 
-                              volumeInfo.imageLinks.smallThumbnail;
-                }
-                
-                // Extract authors
-                const authors = volumeInfo.authors || ['Unknown Author'];
-                
-                const book = {
-                    title: volumeInfo.title,
-                    authors: authors,
-                    isbn: isbn,
-                    description: volumeInfo.description || 'No description available',
-                    publishedDate: volumeInfo.publishedDate || 'Unknown',
-                    publisher: volumeInfo.publisher || 'Unknown',
-                    coverUrl: coverUrl
-                };
-                
-                console.log(`📖 Added: "${book.title}" by ${book.authors[0]}`);
-                books.push(book);
-                
-            } catch (itemError) {
-                console.error('❌ Error processing book item:', itemError);
-            }
-        }
-        
-        console.log(`✅ Successfully processed ${books.length} books`);
-        
-        if (books.length === 0) {
-            console.log(`❌ No valid books found after processing for: "${query}"`);
-        }
-        
-        return books;
-        
-    } catch (error) {
-        console.error('❌ Book search failed:', error.message);
-        
-        if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
-            console.error('❌ Network error - cannot reach Google Books API');
-            console.error('❌ Please check your internet connection');
-        } else if (error.message.includes('timeout')) {
-            console.error('❌ Request timeout - API is not responding');
-        }
-        
-        return [];
-    }
-});
 
 /**
  * Application startup sequence
@@ -414,49 +358,277 @@ ipcMain.handle('register-user', async (event, username, password, userType = 'st
 });
 
 /**
- * BOOK CHECKOUT: Record when a user borrows a book WITH LIMIT CHECK
+ * BOOK SEARCH: Query Google Books API using Node.js https module
+ */
+ipcMain.handle('search-books', async (event, query) => {
+    try {
+        console.log(`🔍 Searching books for: "${query}"`);
+        
+        if (!query || query.trim().length === 0) {
+            console.log('❌ Empty search query');
+            return [];
+        }
+
+        const cleanQuery = query.trim();
+        const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=15&printType=books`;
+        
+        const data = await makeHttpsRequest(apiUrl);
+        
+        console.log(`📊 API response - Total items: ${data.totalItems || 0}`);
+        
+        if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
+            console.log(`📭 No books found in API response for: "${query}"`);
+            return [];
+        }
+        
+        console.log(`✅ Found ${data.items.length} items in API response`);
+        
+        // Process each book
+        const books = [];
+        
+        for (const item of data.items) {
+            try {
+                const volumeInfo = item.volumeInfo || {};
+                
+                // Skip items without basic info
+                if (!volumeInfo.title) {
+                    continue;
+                }
+                
+                // Extract ISBN
+                let isbn = 'No ISBN';
+                if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
+                    const isbn13 = volumeInfo.industryIdentifiers.find(id => id.type === 'ISBN_13');
+                    const isbn10 = volumeInfo.industryIdentifiers.find(id => id.type === 'ISBN_10');
+                    isbn = (isbn13 || isbn10 || volumeInfo.industryIdentifiers[0])?.identifier || 'No ISBN';
+                }
+                
+                // Extract cover image
+                let coverUrl = null;
+                if (volumeInfo.imageLinks) {
+                    coverUrl = volumeInfo.imageLinks.thumbnail || 
+                              volumeInfo.imageLinks.smallThumbnail;
+                }
+                
+                // Extract authors
+                const authors = volumeInfo.authors || ['Unknown Author'];
+                
+                const book = {
+                    title: volumeInfo.title,
+                    authors: authors,
+                    isbn: isbn,
+                    description: volumeInfo.description || 'No description available',
+                    publishedDate: volumeInfo.publishedDate || 'Unknown',
+                    publisher: volumeInfo.publisher || 'Unknown',
+                    coverUrl: coverUrl
+                };
+                
+                console.log(`📖 Added: "${book.title}" by ${book.authors[0]}`);
+                books.push(book);
+                
+            } catch (itemError) {
+                console.error('❌ Error processing book item:', itemError);
+            }
+        }
+        
+        console.log(`✅ Successfully processed ${books.length} books`);
+        
+        if (books.length === 0) {
+            console.log(`❌ No valid books found after processing for: "${query}"`);
+        }
+        
+        return books;
+        
+    } catch (error) {
+        console.error('❌ Book search failed:', error.message);
+        
+        if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
+            console.error('❌ Network error - cannot reach Google Books API');
+            console.error('❌ Please check your internet connection');
+        } else if (error.message.includes('timeout')) {
+            console.error('❌ Request timeout - API is not responding');
+        }
+        
+        return [];
+    }
+});
+
+/**
+ * SMART BOOK SUGGESTIONS: Get book recommendations based on age and interests
+ */
+ipcMain.handle('get-book-suggestions', async (event, age, interests = []) => {
+    try {
+        console.log(`📚 Getting book suggestions for age ${age}, interests: ${interests.join(', ')}`);
+        
+        // Age-appropriate book categories
+        const ageCategories = {
+            '5-7': ['picture books', 'early readers', 'animals', 'friendship'],
+            '8-10': ['chapter books', 'adventure', 'mystery', 'fantasy'],
+            '11-13': ['middle grade', 'science fiction', 'historical', 'coming of age']
+        };
+
+        // Determine age group
+        let ageGroup = '8-10'; // default
+        if (age >= 5 && age <= 7) ageGroup = '5-7';
+        else if (age >= 8 && age <= 10) ageGroup = '8-10';
+        else if (age >= 11 && age <= 13) ageGroup = '11-13';
+
+        const categories = [...ageCategories[ageGroup], ...interests];
+        const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+        
+        const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=subject:${encodeURIComponent(randomCategory)}&maxResults=8&printType=books&langRestrict=en`;
+        
+        const data = await makeHttpsRequest(apiUrl);
+        
+        if (!data.items || data.items.length === 0) {
+            return [];
+        }
+
+        const suggestions = data.items.map(item => {
+            const volumeInfo = item.volumeInfo || {};
+            return {
+                title: volumeInfo.title || 'Unknown Title',
+                authors: volumeInfo.authors || ['Unknown Author'],
+                isbn: volumeInfo.industryIdentifiers?.[0]?.identifier || 'No ISBN',
+                description: volumeInfo.description || 'No description available',
+                categories: volumeInfo.categories || [randomCategory],
+                coverUrl: volumeInfo.imageLinks?.thumbnail,
+                ageGroup: ageGroup,
+                reason: `Recommended because you like ${randomCategory}`
+            };
+        }).filter(book => book.title !== 'Unknown Title');
+
+        console.log(`✅ Generated ${suggestions.length} book suggestions`);
+        return suggestions;
+
+    } catch (error) {
+        console.error('❌ Error getting book suggestions:', error.message);
+        return [];
+    }
+});
+/**
+ * WORD HELPER - Using same method as Google Books API
+ */
+ipcMain.handle('get-word-help', async (event, word) => {
+    try {
+        console.log(`📖 Getting help for word: "${word}"`);
+        
+        if (!word || word.trim().length === 0) {
+            return { success: false, error: 'Please enter a word' };
+        }
+
+        const cleanWord = word.trim().toLowerCase();
+        const apiUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`;
+        
+        console.log(`🌐 Calling Dictionary API: ${apiUrl}`);
+        
+        // Use the same function that works for Google Books
+        const data = await makeHttpsRequest(apiUrl);
+        
+        console.log('📊 Dictionary API response received');
+        
+        if (!data || data.length === 0) {
+            return { success: false, error: `Word "${word}" not found` };
+        }
+
+        // Check if it's an array of suggestions (when word not found)
+        if (typeof data[0] === 'string') {
+            return { 
+                success: false, 
+                error: `Word not found. Did you mean: ${data.slice(0, 3).join(', ')}?` 
+            };
+        }
+
+        const wordData = data[0];
+        const meanings = [];
+        
+        // Extract definitions
+        if (wordData.meanings && Array.isArray(wordData.meanings)) {
+            wordData.meanings.forEach(meaning => {
+                if (meaning.definitions && Array.isArray(meaning.definitions)) {
+                    meaning.definitions.slice(0, 2).forEach(def => {
+                        meanings.push({
+                            partOfSpeech: meaning.partOfSpeech || 'unknown',
+                            definition: def.definition || 'No definition available'
+                        });
+                    });
+                }
+            });
+        }
+
+        // Get pronunciation
+        let phonetic = wordData.phonetic || '';
+        if (!phonetic && wordData.phonetics && wordData.phonetics.length > 0) {
+            phonetic = wordData.phonetics[0].text || '';
+        }
+
+        // Get audio URL
+        let audioUrl = '';
+        if (wordData.phonetics && wordData.phonetics.length > 0) {
+            const audioPhonetic = wordData.phonetics.find(p => p.audio && p.audio !== '');
+            if (audioPhonetic && audioPhonetic.audio) {
+                audioUrl = audioPhonetic.audio;
+                if (audioUrl && !audioUrl.startsWith('http')) {
+                    audioUrl = `https:${audioUrl}`;
+                }
+            }
+        }
+
+        const result = {
+            success: true,
+            word: wordData.word || cleanWord,
+            phonetic: phonetic,
+            meanings: meanings,
+            audio: audioUrl,
+            source: 'Dictionary API'
+        };
+
+        console.log(`✅ Found ${meanings.length} definitions for "${cleanWord}"`);
+        return result;
+
+    } catch (error) {
+        console.error('❌ Dictionary API error:', error.message);
+        
+        // Provide helpful error message
+        if (error.message.includes('fetch') || error.message.includes('network')) {
+            return { 
+                success: false, 
+                error: 'Cannot connect to dictionary service. Please check your internet connection.' 
+            };
+        } else if (error.message.includes('timeout')) {
+            return { 
+                success: false, 
+                error: 'Dictionary service is taking too long to respond. Please try again.' 
+            };
+        } else {
+            return { 
+                success: false, 
+                error: 'Dictionary service unavailable. Please try a different word.' 
+            };
+        }
+    }
+});
+/**
+ * BOOK CHECKOUT: Record when a user borrows a book
  */
 ipcMain.handle('checkout-book', async (event, userId, isbn, title, author, coverUrl) => {
     return new Promise((resolve, reject) => {
-        // First check how many active checkouts the user has
-        db.get(
-            'SELECT COUNT(*) as active_count FROM checkouts WHERE user_id = ? AND returned = 0',
-            [userId],
-            (err, row) => {
+        db.run(
+            'INSERT INTO checkouts (user_id, isbn, title, author, cover_url) VALUES (?, ?, ?, ?, ?)',
+            [userId, isbn, title, author, coverUrl],
+            function(err) {
                 if (err) {
-                    console.error('❌ Error checking active checkouts:', err.message);
+                    console.error('❌ Checkout error:', err.message);
                     resolve({ success: false, error: 'Checkout failed: ' + err.message });
-                    return;
+                } else {
+                    console.log(`✅ Book checked out: "${title}" by user ${userId}`);
+                    resolve({ success: true, checkoutId: this.lastID });
                 }
-                
-                const MAX_CHECKOUTS = 1; // Set your limit here
-                
-                if (row.active_count >= MAX_CHECKOUTS) {
-                    resolve({ 
-                        success: false, 
-                        error: `You cannot check out more than ${MAX_CHECKOUTS} books at a time. Please return some books first.` 
-                    });
-                    return;
-                }
-                
-                // If under limit, proceed with checkout
-                db.run(
-                    'INSERT INTO checkouts (user_id, isbn, title, author, cover_url) VALUES (?, ?, ?, ?, ?)',
-                    [userId, isbn, title, author, coverUrl],
-                    function(err) {
-                        if (err) {
-                            console.error('❌ Checkout error:', err.message);
-                            resolve({ success: false, error: 'Checkout failed: ' + err.message });
-                        } else {
-                            console.log(`✅ Book checked out: "${title}" by user ${userId}`);
-                            resolve({ success: true, checkoutId: this.lastID });
-                        }
-                    }
-                );
             }
         );
     });
 });
+
 /**
  * GET USER CHECKOUTS: Retrieve books borrowed by a specific user - PROPER UNIQUE BOOKS
  */
@@ -487,21 +659,6 @@ ipcMain.handle('get-user-checkouts', async (event, userId) => {
                 resolve([]);
             } else {
                 console.log(`✅ Found ${rows.length} unique books for user ${userId}`);
-                resolve(rows);
-            }
-        });
-    });
-});
-/**
- * GET ALL USERS (Admin): Retrieve all users with detailed information
- */
-ipcMain.handle('get-all-users-detailed', async (event) => {
-    return new Promise((resolve, reject) => {
-        db.all('SELECT * FROM users ORDER BY createdAt DESC', (err, rows) => {
-            if (err) {
-                console.error('❌ Error fetching all users:', err.message);
-                resolve([]);
-            } else {
                 resolve(rows);
             }
         });
@@ -540,30 +697,7 @@ ipcMain.handle('get-all-checkouts', async (event, searchQuery = '') => {
         });
     });
 });
-/**
- * DELETE CHECKOUT: Completely remove a checkout record from database
- */
-ipcMain.handle('delete-checkout', async (event, checkoutId) => {
-    return new Promise((resolve, reject) => {
-        console.log(`🗑️ Deleting checkout record: ${checkoutId}`);
-        
-        db.run(
-            'DELETE FROM checkouts WHERE id = ?',
-            [checkoutId],
-            function(err) {
-                if (err) {
-                    console.error('❌ Error deleting checkout:', err.message);
-                    resolve({ success: false, error: err.message });
-                } else if (this.changes === 0) {
-                    resolve({ success: false, error: 'Checkout not found' });
-                } else {
-                    console.log(`✅ Checkout ${checkoutId} deleted from database`);
-                    resolve({ success: true });
-                }
-            }
-        );
-    });
-});
+
 /**
  * READ SOURCE FILE: Educational feature to show app source code
  */
@@ -703,6 +837,107 @@ ipcMain.handle('return-book', async (event, checkoutId) => {
                 }
             }
         );
+    });
+});
+
+// =============================================================================
+// READING TIMER FUNCTIONS
+// =============================================================================
+
+/**
+ * START READING SESSION
+ */
+ipcMain.handle('start-reading-session', async (event, userId, bookTitle = '') => {
+    return new Promise((resolve, reject) => {
+        db.run(
+            'INSERT INTO reading_sessions (user_id, book_title) VALUES (?, ?)',
+            [userId, bookTitle],
+            function(err) {
+                if (err) {
+                    console.error('❌ Error starting reading session:', err.message);
+                    resolve({ success: false, error: err.message });
+                } else {
+                    console.log(`✅ Reading session started for user ${userId}`);
+                    resolve({ success: true, sessionId: this.lastID });
+                }
+            }
+        );
+    });
+});
+
+/**
+ * END READING SESSION
+ */
+ipcMain.handle('end-reading-session', async (event, sessionId, pagesRead = 0) => {
+    return new Promise((resolve, reject) => {
+        db.run(
+            `UPDATE reading_sessions 
+             SET end_time = CURRENT_TIMESTAMP,
+                 duration_minutes = ROUND((JULIANDAY(CURRENT_TIMESTAMP) - JULIANDAY(start_time)) * 24 * 60),
+                 pages_read = ?
+             WHERE id = ? AND end_time IS NULL`,
+            [pagesRead, sessionId],
+            function(err) {
+                if (err) {
+                    console.error('❌ Error ending reading session:', err.message);
+                    resolve({ success: false, error: err.message });
+                } else if (this.changes === 0) {
+                    resolve({ success: false, error: 'Session not found or already ended' });
+                } else {
+                    console.log(`✅ Reading session ${sessionId} ended`);
+                    resolve({ success: true });
+                }
+            }
+        );
+    });
+});
+
+/**
+ * SET READING GOAL
+ */
+ipcMain.handle('set-reading-goal', async (event, userId, goalType, targetMinutes, startDate, endDate) => {
+    return new Promise((resolve, reject) => {
+        db.run(
+            'INSERT INTO reading_goals (user_id, goal_type, target_minutes, start_date, end_date) VALUES (?, ?, ?, ?, ?)',
+            [userId, goalType, targetMinutes, startDate, endDate],
+            function(err) {
+                if (err) {
+                    console.error('❌ Error setting reading goal:', err.message);
+                    resolve({ success: false, error: err.message });
+                } else {
+                    console.log(`✅ Reading goal set for user ${userId}`);
+                    resolve({ success: true, goalId: this.lastID });
+                }
+            }
+        );
+    });
+});
+
+/**
+ * GET READING STATS
+ */
+ipcMain.handle('get-reading-stats', async (event, userId) => {
+    return new Promise((resolve, reject) => {
+        db.all(`
+            SELECT 
+                SUM(duration_minutes) as total_minutes,
+                COUNT(*) as session_count,
+                SUM(pages_read) as total_pages
+            FROM reading_sessions 
+            WHERE user_id = ? AND duration_minutes IS NOT NULL
+        `, [userId], (err, rows) => {
+            if (err) {
+                console.error('❌ Error getting reading stats:', err.message);
+                resolve({ totalMinutes: 0, sessionCount: 0, totalPages: 0 });
+            } else {
+                const stats = rows[0] || { total_minutes: 0, session_count: 0, total_pages: 0 };
+                resolve({
+                    totalMinutes: stats.total_minutes || 0,
+                    sessionCount: stats.session_count || 0,
+                    totalPages: stats.total_pages || 0
+                });
+            }
+        });
     });
 });
 
