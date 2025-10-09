@@ -4,11 +4,6 @@
  * This file acts as a secure bridge between the main process (backend) and 
  * renderer process (frontend). It exposes specific API functions to the 
  * frontend while maintaining security.
- * 
- * Why we need this:
- * - Prevents the frontend from having direct access to Node.js
- * - Controls exactly what functions the frontend can call
- * - Maintains security while allowing necessary functionality
  */
 
 const { contextBridge, ipcRenderer } = require('electron');
@@ -16,21 +11,16 @@ const { contextBridge, ipcRenderer } = require('electron');
 /**
  * Expose protected methods that allow the renderer process to use
  * the ipcRenderer without exposing the entire object
- * 
- * This creates a safe API that the frontend can use to communicate
- * with the backend main process.
  */
 contextBridge.exposeInMainWorld('electronAPI', {
     /**
      * USER MANAGEMENT FUNCTIONS
-     * These handle user authentication and registration
      */
     loginUser: (username, password) => ipcRenderer.invoke('login-user', username, password),
     registerUser: (username, password, userType) => ipcRenderer.invoke('register-user', username, password, userType),
     
     /**
      * BOOK MANAGEMENT FUNCTIONS  
-     * These handle book searching and checkout operations
      */
     searchBooks: (query) => ipcRenderer.invoke('search-books', query),
     checkoutBook: (userId, isbn, title, author, coverUrl) => ipcRenderer.invoke('checkout-book', userId, isbn, title, author, coverUrl),
@@ -38,10 +28,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     /**
      * ADMIN FUNCTIONS
-     * These are only used by admin users for system management
      */
     getAllUsersDetailed: () => ipcRenderer.invoke('get-all-users-detailed'),
-    getAllCheckouts: () => ipcRenderer.invoke('get-all-checkouts'),
+    getAllCheckouts: (searchQuery) => ipcRenderer.invoke('get-all-checkouts', searchQuery),
     changeUserType: (userId, newType) => ipcRenderer.invoke('change-user-type', userId, newType),
     changeUserPassword: (userId, newPassword) => ipcRenderer.invoke('change-user-password', userId, newPassword),
     deleteUser: (userId) => ipcRenderer.invoke('delete-user', userId),
@@ -49,15 +38,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     /**
      * EDUCATIONAL FUNCTIONS
-     * These support the "learn to code" feature
      */
-    readSourceFile: (filename) => ipcRenderer.invoke('read-source-file', filename)
+    readSourceFile: (filename) => ipcRenderer.invoke('read-source-file', filename),
+    
+    /**
+     * NEW FEATURES
+     */
+    getBookSuggestions: (age, interests) => ipcRenderer.invoke('get-book-suggestions', age, interests),
+    getWordHelp: (word) => ipcRenderer.invoke('get-word-help', word),
+    startReadingSession: (userId, bookTitle) => ipcRenderer.invoke('start-reading-session', userId, bookTitle),
+    endReadingSession: (sessionId, pagesRead) => ipcRenderer.invoke('end-reading-session', sessionId, pagesRead),
+    setReadingGoal: (userId, goalType, targetMinutes, startDate, endDate) => ipcRenderer.invoke('set-reading-goal', userId, goalType, targetMinutes, startDate, endDate),
+    getReadingStats: (userId) => ipcRenderer.invoke('get-reading-stats', userId)
 });
-contextBridge.exposeInMainWorld('electronAPI', {
-    // ... your existing functions ...
-    deleteCheckout: (checkoutId) => ipcRenderer.invoke('delete-checkout', checkoutId),
-    // ... rest of your functions ...
-});
+
 /**
  * SECURITY NOTE:
  * By using contextBridge, we ensure that the frontend JavaScript
