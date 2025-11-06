@@ -470,21 +470,22 @@
                 <button onclick="showSection('welcomeSection')">Back to Menu</button>
     	    </div>
 	</section>
-	<!-- This is the quick word help section -->
-	<div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #ffeaa7;">
-    	    <h3 style="margin-bottom: 0;">📖 Quick Word Helper</h3>
-    	    <p><small>Get help with any word while you're here!</small></p>
-    	    <div style="display: flex; gap: 10px;">
-        	<input type="text" id="quickWordInput" placeholder="Enter any word..." 
-               	    style="flex-grow: 1; padding: 8px; border: 2px solid #cbd5e0; border-radius: 5px;">
-        	<button onclick="quickWordHelp()" style="background: #4299e1; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
-            	    Get Help
-        	</button>
-    	    </div>
-    	    <div id="quickWordResult" style="margin-bottom: 10px;">
-                <!-- Word help will appear here -->
-            </div>
+    <!-- QUICK WORD HELPER BAR - Only visible on login/register pages -->
+<div class="container">
+    <div id="quickWordHelper" style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #ffeaa7; display: none;">
+        <h3 style="margin-bottom: 0; margin-top: 0;">📖 Quick Word Helper</h3>
+        <p style="margin: 5px 0 10px 0;"><small>Get help with any word while you're here!</small></p>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="quickWordInput" placeholder="Enter any word..." 
+                   style="flex-grow: 1; padding: 10px; border: 2px solid #cbd5e0; border-radius: 5px; font-size: 1em;">
+            <button onclick="quickWordHelp()" style="background: #4299e1; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em;">
+                Get Help
+            </button>
         </div>
+        <div id="quickWordResult" style="margin-top: 10px;">
+            <!-- Word help will appear here -->
+        </div>
+    </div>
         <!-- 
             REGISTRATION SECTION - Account Creation
             Allows new users to create student accounts in the system.
@@ -513,7 +514,6 @@
             <!-- Registration message display for user feedback -->
             <div id="regMessage" class="message"></div>
         </section>
-
         <!-- 
             WELCOME SECTION - Main Application Dashboard
             Central hub that appears after successful login.
@@ -559,9 +559,9 @@
                     <p>Learn how this application works by exploring the code behind it</p>
                 </div>
                 <div class="function-card" onclick="showSection('wordHelperSection')">
-                    <span class="icon"></span>
-                    <h3>Word Helper</h3>
-                    <p>Learn new word you need help with</p>
+                <span class="icon">🧠</span>
+                <h3>Word Helper</h3>
+                <p>Learn a word you need help with</p>
                 </div>
                 
                 <!-- 
@@ -773,7 +773,11 @@
                     <h3>User View</h3>
                     <p>Return to the standard library interface as a regular user</p>
                 </div>
-                
+                <!-- 
+                    ADMIN TOOLS CARDS CONTAINER - Conditionally displayed
+                    Only visible to users with admin privileges.
+                    Demonstrates role-based access control in the UI.
+                -->
                 <!-- 
                     LOGOUT CARD - Session management
                     Allows administrators to securely log out of the system
