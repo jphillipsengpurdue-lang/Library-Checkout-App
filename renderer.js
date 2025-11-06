@@ -69,6 +69,14 @@ function showSection(sectionId) {
         targetSection.style.display = 'block';
     }
     
+    // Toggle quick word helper visibility (only show on login/register pages)
+    toggleQuickHelperBar(sectionId);
+    
+    // Update admin visibility when showing welcome section
+    if (sectionId === 'welcomeSection' && currentUser) {
+        updateAdminVisibility();
+    }
+    
     // Update navigation visibility based on current section
     const loggedInNav = document.getElementById('loggedInNav');
     const loggedInUserMenu = document.getElementById('loggedInUserMenu');
@@ -105,7 +113,48 @@ function showMessage(containerId, message, type = 'success') {
         }
     }
 }
-
+/**Manages admin card visibility based on user type */
+function updateAdminVisibility() {
+    const adminCards = document.getElementById('adminCards');
+    const adminReturnCard = document.getElementById('adminReturnCard');
+    
+    // Only proceed if these elements exist on the current page
+    if (adminCards) {
+        if (currentUser && currentUser.userType === 'admin') {
+            adminCards.style.display = 'block';
+            if (adminReturnCard) {
+                adminReturnCard.style.display = 'block';
+            }
+        } else {
+            adminCards.style.display = 'none';
+            if (adminReturnCard) {
+                adminReturnCard.style.display = 'none';
+            }
+        }
+    }
+    // If elements don't exist, it's fine - they're just not on this page
+}
+/**
+ * Toggle quick word helper bar visibility
+ * Only show on login and register pages
+ */
+function toggleQuickHelperBar(sectionId) {
+    const quickWordHelper = document.getElementById('quickWordHelper');
+    
+    if (!quickWordHelper) {
+        console.log('❌ Quick word helper element not found');
+        return;
+    }
+    
+    // Show ONLY on login page, NOT register page
+    if (sectionId === 'loginSection') {
+        quickWordHelper.style.display = 'block';
+        console.log('✅ Quick word helper shown on login page');
+    } else {
+        quickWordHelper.style.display = 'none';
+        console.log('✅ Quick word helper hidden');
+    }
+}
 // =============================================================================
 // AUTHENTICATION FUNCTIONS - Handle user login and registration
 // =============================================================================
@@ -137,6 +186,9 @@ async function login() {
             currentUser = result.user;
             const welcomeUsername = document.getElementById('welcomeUsername');
             if (welcomeUsername) welcomeUsername.textContent = currentUser.username;
+            
+            // Update admin visibility
+            updateAdminVisibility();
             
             // Clear sensitive form data
             document.getElementById('loginUsername').value = '';
@@ -342,20 +394,26 @@ async function loadMyCheckouts() {
     }
     
     try {
+        console.log('🔄 Calling getUserCheckouts API for user:', currentUser.id);
         const checkouts = await window.electronAPI.getUserCheckouts(currentUser.id);
+        console.log('📚 Raw checkouts data from API:', checkouts);
+        
         const container = document.getElementById('checkoutsList');
         
         if (!container) {
-            console.error('Checkouts list container not found');
+            console.error('❌ Checkouts list container not found');
             return;
         }
         
         container.innerHTML = '';
         
-        if (checkouts.length === 0) {
+        if (!checkouts || checkouts.length === 0) {
             container.innerHTML = '<p>No books checked out.</p>';
+            console.log('✅ No books checked out');
         } else {
-            checkouts.forEach(checkout => {
+            console.log(`✅ Found ${checkouts.length} books to display`);
+            checkouts.forEach((checkout, index) => {
+                console.log(`📖 Book ${index + 1}:`, checkout);
                 const element = document.createElement('div');
                 element.className = 'checkout-item';
                 element.innerHTML = `
@@ -368,7 +426,7 @@ async function loadMyCheckouts() {
                         <div>
                             <strong>${checkout.title}</strong><br>
                             <em>by ${checkout.author}</em><br>
-                            Due: ${new Date(checkout.current_due_date).toLocaleDateString()}
+                            Due: ${new Date(checkout.due_date).toLocaleDateString()}
                             ${checkout.returned ? '<span style="color: green;">(Returned)</span>' : ''}
                         </div>
                     </div>
@@ -378,9 +436,9 @@ async function loadMyCheckouts() {
         }
         showSection('myCheckoutsSection');
     } catch (error) {
-        console.error('Error loading checkouts:', error);
+        console.error('❌ Error in loadMyCheckouts:', error);
         const container = document.getElementById('checkoutsList');
-        if (container) container.innerHTML = '<p>Error loading books.</p>';
+        if (container) container.innerHTML = '<p>Error loading books: ' + error.message + '</p>';
     }
 }
 
@@ -852,10 +910,9 @@ async function quickWordHelp() {
         container.innerHTML = '<p>🔍 Looking up word...</p>';
         
         const result = await window.electronAPI.getWordHelp(word);
-        console.log('Word help result:', result); // Debug log
+        console.log('Word help result:', result);
         
         if (result.success) {
-            // Check if we have meanings in the new format
             const hasMeanings = result.meanings && result.meanings.length > 0;
             
             container.innerHTML = `
@@ -870,12 +927,6 @@ async function quickWordHelp() {
                                     style="background: #4299e1; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; margin-left: 5px;">
                                 🔊 Speak
                             </button>
-                            ${result.audio ? `
-                                <button onclick="playAudio('${result.audio}')" 
-                                        style="background: #48bb78; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; margin-left: 5px;">
-                                    🎵 Audio
-                                </button>
-                            ` : ''}
                         </div>
                     </div>
                     
@@ -897,9 +948,6 @@ async function quickWordHelp() {
                     `}
                 </div>
             `;
-            
-            // Auto-speak the word after a short delay
-            setTimeout(() => speakWord(result.word), 800);
             
         } else {
             container.innerHTML = `
