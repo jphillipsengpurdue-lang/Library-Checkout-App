@@ -69,7 +69,7 @@ function showSection(sectionId) {
         targetSection.style.display = 'block';
     }
     
-    // Toggle quick word helper visibility (only show on login/register pages)
+    // Toggle quick word helper visibility
     toggleQuickHelperBar(sectionId);
     
     // Update admin visibility when showing welcome section
@@ -77,21 +77,20 @@ function showSection(sectionId) {
         updateAdminVisibility();
     }
     
-    // Update navigation visibility based on current section
+    // Update navigation visibility
     const loggedInNav = document.getElementById('loggedInNav');
     const loggedInUserMenu = document.getElementById('loggedInUserMenu');
     const loggedOutNav = document.getElementById('loggedOutNav');
-    
+
     const isLoggedInSection = sectionId !== 'loginSection' && sectionId !== 'registerSection';
-    
-    if (isLoggedInSection) {
-        loggedInNav.style.display = 'flex';
-        loggedInUserMenu.style.display = 'flex';
-        loggedOutNav.style.display = 'none';
-    } else {
-        loggedInNav.style.display = 'none';
-        loggedInUserMenu.style.display = 'none';
-        loggedOutNav.style.display = 'block';
+
+    if (loggedInNav) loggedInNav.style.display = isLoggedInSection ? 'flex' : 'none';
+    if (loggedInUserMenu) loggedInUserMenu.style.display = isLoggedInSection ? 'flex' : 'none';
+    if (loggedOutNav) loggedOutNav.style.display = isLoggedInSection ? 'none' : 'block';
+
+    // ⭐ Load reading stats when entering stats page
+    if (sectionId === 'readingStatsSection') {
+        loadReadingStats();
     }
 }
 /**
@@ -1293,6 +1292,139 @@ window.adminReturnBook = async function(checkoutId) {
         }
     }
 };
+let activeReadingSession = null;
+let readingStartTime = null;
+let readingInterval = null;
+
+// Update stopwatch display
+function updateStopwatch() {
+    const now = Date.now();
+    const elapsedMs = now - readingStartTime;
+    const sec = Math.floor(elapsedMs / 1000) % 60;
+    const min = Math.floor(elapsedMs / 60000);
+
+    document.getElementById('readingResults').innerHTML =
+        `<p><strong>Timer:</strong> ${min}m ${sec}s</p>`;
+}
+
+async function startReadingTimer() {
+    if (!currentUser) {
+        showMessage('readingStatus', 'Please log in first', 'error');
+        return;
+    }
+
+    const title = document.getElementById('readingBookTitle').value.trim();
+
+    // Start backend session
+    const result = await window.electronAPI.startReadingSession(currentUser.id, title);
+
+    if (result.success) {
+        activeReadingSession = result.sessionId;
+        readingStartTime = Date.now();
+        console.log("START SESSION RESULT:", result);
+        console.log("SESSION ID WE SAVED:", activeReadingSession);
+        // Start stopwatch
+        readingInterval = setInterval(updateStopwatch, 1000);
+
+        showMessage('readingStatus', '⏱️ Reading session started!', 'success');
+        document.getElementById('startReadingBtn').style.display = 'none';
+        document.getElementById('stopReadingBtn').style.display = 'inline-block';
+        document.getElementById('pagesReadContainer').style.display = 'block';
+        document.getElementById('pauseReadingBtn').style.display = 'inline-block';
+        document.getElementById('resumeReadingBtn').style.display = 'none';
+
+    } else {
+        showMessage('readingStatus', 'Error starting session', 'error');
+    }
+}
+let isPaused = false;
+let pausedAt = null;
+
+// Pause the timer
+function pauseReadingTimer() {
+    if (!readingInterval) return;
+
+    clearInterval(readingInterval);
+    readingInterval = null;
+    isPaused = true;
+    pausedAt = Date.now();
+
+    showMessage('readingStatus', '⏸️ Reading paused.', 'info');
+
+    document.getElementById('pauseReadingBtn').style.display = 'none';
+    document.getElementById('resumeReadingBtn').style.display = 'inline-block';
+}
+
+// Resume the timer
+function resumeReadingTimer() {
+    if (!isPaused) return;
+
+    // Adjust start time so paused time is not counted
+    const pausedDuration = Date.now() - pausedAt;
+    readingStartTime += pausedDuration;
+
+    readingInterval = setInterval(updateStopwatch, 1000);
+
+    isPaused = false;
+    pausedAt = null;
+
+    showMessage('readingStatus', '▶️ Reading resumed!', 'success');
+
+    document.getElementById('resumeReadingBtn').style.display = 'none';
+    document.getElementById('pauseReadingBtn').style.display = 'inline-block';
+}
+async function stopReadingTimer() {
+    console.log("STOP BUTTON CLICKED");
+
+    if (!activeReadingSession) {
+        showMessage('readingStatus', 'No active reading session was found', 'error');
+        return;
+    }
+
+    // Stop stopwatch
+    clearInterval(readingInterval);
+
+    // Read pages from the input box
+    const pg = parseInt(document.getElementById('pagesReadInput').value || "0");
+
+    // End backend session
+    const result = await window.electronAPI.endReadingSession(activeReadingSession, pg);
+    console.log("RESULT FROM BACKEND:", result);
+
+    if (result.success) {
+        showMessage('readingStatus', '📘 Reading session saved!', 'success');
+        document.getElementById('readingResults').innerHTML +=
+            `<p><strong>Session saved.</strong> Pages read: ${pg}</p>`;
+    } else {
+        showMessage('readingStatus', 'Error ending session', 'error');
+    }
+
+    // UI RESET — This is the part you asked about
+    activeReadingSession = null;
+
+    document.getElementById('startReadingBtn').style.display = 'inline-block';
+    document.getElementById('stopReadingBtn').style.display = 'none';
+    document.getElementById('pagesReadContainer').style.display = 'none';
+    document.getElementById('pagesReadInput').value = "";
+    document.getElementById('pauseReadingBtn').style.display = 'none';
+    document.getElementById('resumeReadingBtn').style.display = 'none';
+    isPaused = false;
+    pausedAt = null;
+}
+async function loadReadingStats() {
+    if (!currentUser) return;
+
+    const stats = await window.electronAPI.getReadingStats(currentUser.id);
+
+    document.getElementById('readingStatsContent').innerHTML = `
+        <p><strong>Total Sessions:</strong> ${stats.totalSessions}</p>
+        <p><strong>Total Minutes:</strong> ${stats.totalMinutes}</p>
+        <p><strong>Total Pages:</strong> ${stats.totalPages}</p>
+        <p><strong>Average Session Length:</strong> ${stats.avgMinutes} minutes</p>
+        <p><strong>Most Read Book:</strong> ${stats.mostReadBook || "N/A"}</p>
+        <p><strong>Last Session:</strong> ${stats.lastSession || "N/A"}</p>
+    `;
+}
 // =============================================================================
 // APPLICATION INITIALIZATION
 // =============================================================================
