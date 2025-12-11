@@ -816,29 +816,21 @@ ipcMain.handle('delete-user', async (event, userId) => {
 /**
  * RETURN BOOK: Mark a book as returned
  */
-ipcMain.handle('return-book', async (event, checkoutId) => {
-    return new Promise((resolve, reject) => {
-        console.log(`🔄 Returning book with checkout ID: ${checkoutId}`);
-        
-        db.run(
-            `UPDATE checkouts 
-             SET returned = 1, return_date = CURRENT_TIMESTAMP 
-             WHERE id = ? AND returned = 0`,
-            [checkoutId],
-            function(err) {
-                if (err) {
-                    console.error('❌ Error returning book:', err.message);
-                    resolve({ success: false, error: err.message });
-                } else if (this.changes === 0) {
-                    resolve({ success: false, error: 'Checkout not found or already returned' });
-                } else {
-                    console.log(`✅ Book returned for checkout ID: ${checkoutId}`);
-                    resolve({ success: true });
-                }
-            }
-        );
+// RETURN BOOK: Hard-delete the checkout row by id (sqlite3 async)
+ipcMain.handle('return-book', async (event, { checkoutId }) => {
+  return new Promise((resolve) => {
+    db.run('DELETE FROM checkouts WHERE id = ?', [checkoutId], function (err) {
+      if (err) {
+        console.error('❌ Error deleting checkout:', err.message);
+        resolve({ success: false, error: err.message });
+      } else {
+        // this.changes === 1 when a row was deleted
+        resolve({ success: this.changes === 1 });
+      }
     });
+  });
 });
+
 
 // =============================================================================
 // READING TIMER FUNCTIONS
@@ -847,7 +839,7 @@ ipcMain.handle('return-book', async (event, checkoutId) => {
 /**
  * START READING SESSION
  */
-ipcMain.handle('start-reading-session', async (event, userId, bookTitle = '') => {
+ipcMain.handle('start-reading-session', async (event, { userId, bookTitle = '' }) => {
     return new Promise((resolve, reject) => {
         db.run(
             'INSERT INTO reading_sessions (user_id, book_title) VALUES (?, ?)',
@@ -868,7 +860,7 @@ ipcMain.handle('start-reading-session', async (event, userId, bookTitle = '') =>
 /**
  * END READING SESSION
  */
-ipcMain.handle('end-reading-session', async (event, sessionId, pagesRead = 0) => {
+ipcMain.handle('end-reading-session', async (event, { sessionId, pagesRead = 0 }) => {
     return new Promise((resolve, reject) => {
         db.run(
             `UPDATE reading_sessions 
@@ -936,6 +928,45 @@ ipcMain.handle('get-reading-stats', async (event, userId) => {
                     sessionCount: stats.session_count || 0,
                     totalPages: stats.total_pages || 0
                 });
+            }
+        });
+    });
+});
+// =============================================================================
+// GET DETAILED READING STATS
+// =============================================================================
+ipcMain.handle('get-reading-stats', async (event, userId) => {
+    return new Promise((resolve) => {
+        const query = `
+            SELECT 
+                COUNT(*) as totalSessions,
+                SUM(duration_minutes) as totalMinutes,
+                SUM(pages_read) as totalPages,
+                AVG(duration_minutes) as avgMinutes,
+                (
+                    SELECT book_title 
+                    FROM reading_sessions 
+                    WHERE user_id = ? 
+                    GROUP BY book_title 
+                    ORDER BY COUNT(*) DESC 
+                    LIMIT 1
+                ) as mostReadBook,
+                (
+                    SELECT duration_minutes 
+                    FROM reading_sessions 
+                    WHERE user_id = ? 
+                    ORDER BY end_time DESC 
+                    LIMIT 1
+                ) as lastSession
+            FROM reading_sessions
+            WHERE user_id = ?;
+        `;
+
+        db.get(query, [userId, userId, userId], (err, row) => {
+            if (err) {
+                resolve({ success: false, error: err.message });
+            } else {
+                resolve(row);
             }
         });
     });
