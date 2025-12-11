@@ -46,8 +46,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
      */
     getBookSuggestions: (age, interests) => ipcRenderer.invoke('get-book-suggestions', age, interests),
     getWordHelp: (word) => ipcRenderer.invoke('get-word-help', word),
-    startReadingSession: (userId, bookTitle) => ipcRenderer.invoke('start-reading-session', userId, bookTitle),
-    endReadingSession: (sessionId, pagesRead) => ipcRenderer.invoke('end-reading-session', sessionId, pagesRead),
+    startReadingSession: (userId, bookTitle) => ipcRenderer.invoke('start-reading-session', { userId, bookTitle }),
+    endReadingSession: (sessionId, pagesRead) => ipcRenderer.invoke('end-reading-session', { sessionId, pagesRead }),
     setReadingGoal: (userId, goalType, targetMinutes, startDate, endDate) => ipcRenderer.invoke('set-reading-goal', userId, goalType, targetMinutes, startDate, endDate),
     getReadingStats: (userId) => ipcRenderer.invoke('get-reading-stats', userId)
 });
