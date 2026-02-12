@@ -17,6 +17,12 @@
  * Tracks the currently logged-in user throughout the app session
  */
 let currentUser = null;
+let libraryBooks = [];
+let filteredLibraryBooks = [];
+let lastLibraryReturnSection = 'welcomeSection';
+let lastSuggestionReturnSection = 'welcomeSection';
+let passwordTargetUserId = null;
+let passwordTargetButton = null;
 
 // =============================================================================
 // UTILITY FUNCTIONS - Helper functions used throughout the application
@@ -474,10 +480,6 @@ async function loadAllUsers() {
                     <input type="text" id="userSearch" placeholder="🔍 Search users by username or ID..." 
                            style="padding: 10px; flex-grow: 1; border: 2px solid #cbd5e0; border-radius: 10px; font-size: 1.1em;"
                            onkeyup="filterUsers()">
-                    <button onclick="showActualPasswords()" 
-                            style="padding: 10px 15px; background: #4a5568; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        👁️ Show All Passwords
-                    </button>
                 </div>
                 <div id="usersContainer"></div>
             `;
@@ -498,13 +500,7 @@ async function loadAllUsers() {
                             </span>
                             <br>
                             <small style="color: #718096;">
-                                ID: ${user.id} | 
-                                Password: <span class="password-field">••••••••</span>
-                                <button class="toggle-password" onclick="togglePasswordVisibility(${user.id}, '${user.password}')" 
-                                        style="margin-left: 5px; background: none; border: 1px solid #cbd5e0; border-radius: 3px; cursor: pointer; font-size: 0.8em; padding: 2px 6px;">
-                                    👁️ Show
-                                </button>
-                                | Joined: ${new Date(user.createdAt).toLocaleDateString()}
+                                ID: ${user.id} | Joined: ${new Date(user.createdAt).toLocaleDateString()}
                             </small>
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 5px; margin-left: 15px;">
@@ -514,7 +510,7 @@ async function loadAllUsers() {
                                 <option value="admin" ${user.userType === 'admin' ? 'selected' : ''}>Admin</option>
                             </select>
                             
-                            <button onclick="changeUserPassword(${user.id})" 
+                            <button onclick="changeUserPassword(${user.id}, this)" 
                                     style="padding: 5px 10px; font-size: 0.8em; background: #d69e2e; color: white; border: none; border-radius: 5px; cursor: pointer;">
                                 Change Password
                             </button>
@@ -578,34 +574,90 @@ async function changeUserType(userId, newType) {
  * CHANGE USER PASSWORD: Admin password reset
  * Allows admins to reset passwords for any user
  */
-async function changeUserPassword(userId) {
-    // Prompt for new password
-    const newPassword = prompt('Enter new password for this user:');
+function changeUserPassword(userId, buttonElement) {
+    passwordTargetUserId = userId;
+    passwordTargetButton = buttonElement || null;
+
+    const passwordInput = document.getElementById('adminNewPassword');
+    const confirmInput = document.getElementById('adminConfirmPassword');
+    const modal = document.getElementById('adminPasswordModal');
+
+    if (!passwordInput || !confirmInput || !modal) {
+        showMessage('adminMessage', 'Password dialog is unavailable. Please restart the app.', 'error');
+        return;
+    }
+
+    passwordInput.value = '';
+    confirmInput.value = '';
+    modal.style.display = 'flex';
+    passwordInput.focus();
+}
+
+function closeAdminPasswordModal(event) {
+    if (event && event.target && event.target.id !== 'adminPasswordModal') {
+        return;
+    }
+    const modal = document.getElementById('adminPasswordModal');
+    if (modal) modal.style.display = 'none';
+    passwordTargetUserId = null;
+    passwordTargetButton = null;
+}
+
+async function submitAdminPasswordChange() {
+    if (!passwordTargetUserId) {
+        showMessage('adminMessage', 'Please select a user before changing password.', 'error');
+        return;
+    }
+
+    const passwordInput = document.getElementById('adminNewPassword');
+    const confirmInput = document.getElementById('adminConfirmPassword');
+    const modalButton = document.getElementById('adminSavePasswordBtn');
+    const newPassword = passwordInput?.value || '';
+    const confirmPassword = confirmInput?.value || '';
+
     if (!newPassword) {
+        showMessage('adminMessage', 'Please enter a new password.', 'error');
         return;
     }
-    
-    // Validate password length
-    if (newPassword.length < 3) {
-        alert('Password must be at least 3 characters long');
+    if (newPassword.length < 6) {
+        showMessage('adminMessage', 'Password must be at least 6 characters long.', 'error');
         return;
     }
-    
+    if (newPassword !== confirmPassword) {
+        showMessage('adminMessage', 'Password confirmation does not match.', 'error');
+        return;
+    }
+
     try {
-        debugLog(`Changing password for user ${userId}`);
-        
-        // Call backend to update password
-        const result = await window.electronAPI.changeUserPassword(userId, newPassword);
-        
+        if (modalButton) {
+            modalButton.disabled = true;
+            modalButton.textContent = 'Saving...';
+        }
+        if (passwordTargetButton) {
+            passwordTargetButton.disabled = true;
+            passwordTargetButton.textContent = 'Saving...';
+        }
+
+        const result = await window.electronAPI.changeUserPassword(passwordTargetUserId, newPassword);
         if (result.success) {
             showMessage('adminMessage', 'Password changed successfully', 'success');
-            loadAllUsers(); // Refresh the user list
+            closeAdminPasswordModal();
+            loadAllUsers();
         } else {
             showMessage('adminMessage', `Error: ${result.error}`, 'error');
         }
     } catch (error) {
-        debugLog('ERROR in changeUserPassword: ' + error.message);
+        debugLog('ERROR in submitAdminPasswordChange: ' + error.message);
         showMessage('adminMessage', 'Error changing password: ' + error.message, 'error');
+    } finally {
+        if (modalButton) {
+            modalButton.disabled = false;
+            modalButton.textContent = 'Save Password';
+        }
+        if (passwordTargetButton) {
+            passwordTargetButton.disabled = false;
+            passwordTargetButton.textContent = 'Change Password';
+        }
     }
 }
 
@@ -659,65 +711,104 @@ function filterUsers() {
 }
 
 /**
- * TOGGLE PASSWORD VISIBILITY: Show/hide user passwords
- * Educational feature to see how passwords are stored
+ * LIBRARY SECTION: Show searchable in-app library card content
  */
-function togglePasswordVisibility(userId, actualPassword) {
-    const passwordField = document.querySelector(`#user-${userId} .password-field`);
-    const toggleButton = document.querySelector(`#user-${userId} .toggle-password`);
-    
-    if (passwordField && toggleButton) {
-        if (passwordField.textContent === '••••••••') {
-            // Show actual password (for educational purposes)
-            passwordField.textContent = actualPassword;
-            toggleButton.textContent = '👁️ Hide';
-            toggleButton.style.background = '#e53e3e';
-            toggleButton.style.color = 'white';
-        } else {
-            // Hide password
-            passwordField.textContent = '••••••••';
-            toggleButton.textContent = '👁️ Show';
-            toggleButton.style.background = '';
-            toggleButton.style.color = '';
-        }
-    }
+async function showLibrarySection(returnSection = 'welcomeSection') {
+    lastLibraryReturnSection = returnSection;
+    const backBtn = document.getElementById('libraryBackBtn');
+    if (backBtn) backBtn.setAttribute('onclick', `showSection('${returnSection}')`);
+    showSection('librarySection');
+    await loadLibraryBooks();
 }
 
-/**
- * SHOW ACTUAL PASSWORDS: Reveal all passwords at once
- * Useful for admin troubleshooting and education
- */
-async function showActualPasswords() {
-    try {
-        debugLog('Showing all passwords');
-        
-        // Get all users with their passwords
-        const users = await window.electronAPI.getAllUsersDetailed();
-        const passwordFields = document.querySelectorAll('.password-field');
-        const toggleButtons = document.querySelectorAll('.toggle-password');
-        
-        // Update all password fields to show actual passwords
-        passwordFields.forEach((field, index) => {
-            if (index < users.length) {
-                const user = users[index];
-                field.textContent = user.password;
-            }
-        });
-        
-        // Update all toggle buttons to "Hide" state
-        toggleButtons.forEach(button => {
-            button.textContent = '👁️ Hide';
-            button.style.background = '#e53e3e';
-            button.style.color = 'white';
-        });
-        
-        showMessage('adminMessage', 'All passwords revealed', 'success');
-        
-    } catch (error) {
-        debugLog('ERROR in showActualPasswords: ' + error.message);
-        console.error('Error showing passwords:', error);
-        showMessage('adminMessage', 'Error loading passwords', 'error');
+async function loadLibraryBooks() {
+    libraryBooks = await window.electronAPI.getLibraryBooks();
+    filteredLibraryBooks = [...libraryBooks];
+    renderBookList('libraryList', filteredLibraryBooks);
+}
+
+function filterLibraryBooks() {
+    const query = (document.getElementById('librarySearchInput')?.value || '').toLowerCase().trim();
+    filteredLibraryBooks = libraryBooks.filter(book => {
+        return [book.title, book.author, book.isbn].some(value => (value || '').toLowerCase().includes(query));
+    });
+    renderBookList('libraryList', filteredLibraryBooks);
+}
+
+async function showSuggestionsSection(returnSection = 'welcomeSection') {
+    if (!currentUser) return;
+    lastSuggestionReturnSection = returnSection;
+    const backBtn = document.getElementById('suggestionsBackBtn');
+    if (backBtn) backBtn.setAttribute('onclick', `showSection('${returnSection}')`);
+    showSection('suggestionsSection');
+
+    const response = await window.electronAPI.getUserBookSuggestions(currentUser.id);
+    const suggestions = response.suggestions || [];
+    const popular = response.popular || [];
+    const list = suggestions.length > 0 ? suggestions : popular;
+
+    const summary = document.getElementById('suggestionsSummary');
+    if (summary) {
+        summary.textContent = suggestions.length > 0
+            ? 'Recommended based on your checkout history (author/topic overlap and availability).'
+            : 'No personal history yet, showing popular books as a fallback.';
     }
+
+    renderBookList('suggestionsList', list);
+}
+
+function renderBookList(containerId, books) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!books || books.length === 0) {
+        container.innerHTML = '<p>No books available.</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+    books.forEach(book => {
+        const item = document.createElement('div');
+        item.className = 'checkout-item book-list-item';
+        item.innerHTML = `
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div class="book-cover">${book.coverUrl ? `<img src="${book.coverUrl}" style="width:100%;height:100%;object-fit:cover;" alt="${book.title}">` : '📖'}</div>
+                <div>
+                    <strong>${book.title}</strong><br>
+                    <em>${book.author || 'Unknown Author'}</em><br>
+                    <small>ISBN: ${book.isbn || 'N/A'}</small>
+                </div>
+            </div>
+        `;
+        item.addEventListener('click', () => openBookDetail(book));
+        container.appendChild(item);
+    });
+}
+
+function openBookDetail(book) {
+    const overlay = document.getElementById('bookDetailOverlay');
+    const content = document.getElementById('bookDetailContent');
+    if (!overlay || !content) return;
+    content.innerHTML = `
+        <div style="display:flex; gap:16px; align-items:flex-start;">
+            <div class="book-cover" style="width:140px;height:190px;">
+                ${book.coverUrl ? `<img src="${book.coverUrl}" style="width:100%;height:100%;object-fit:cover;" alt="${book.title}">` : '📖'}
+            </div>
+            <div>
+                <h3 style="margin-top:0;">${book.title}</h3>
+                <p><strong>Author:</strong> ${book.author || 'Unknown Author'}</p>
+                <p><strong>ISBN:</strong> ${book.isbn || 'N/A'}</p>
+                <p><strong>Available Copies:</strong> ${book.availableCopies ?? 'N/A'}</p>
+                <p><strong>Description:</strong> ${book.description || 'No description available for this title yet.'}</p>
+            </div>
+        </div>
+    `;
+    overlay.style.display = 'flex';
+}
+
+function closeBookDetail(event) {
+    if (event && event.target && event.target.id !== 'bookDetailOverlay') return;
+    const overlay = document.getElementById('bookDetailOverlay');
+    if (overlay) overlay.style.display = 'none';
 }
 
 // =============================================================================

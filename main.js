@@ -16,12 +16,39 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const crypto = require('crypto');
 
 /**
  * Global variables to hold our database and window references
  */
 let db;
 let mainWindow;
+
+const PASSWORD_MIN_LENGTH = 6;
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
+    const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+    return `pbkdf2$${salt}$${hash}`;
+}
+
+function verifyPassword(plainPassword, storedPassword) {
+    if (!storedPassword) return false;
+
+    if (storedPassword.startsWith('pbkdf2$')) {
+        const parts = storedPassword.split('$');
+        if (parts.length !== 3) return false;
+        const [, salt, storedHash] = parts;
+        const computedHash = crypto.pbkdf2Sync(plainPassword, salt, 100000, 64, 'sha512').toString('hex');
+        return crypto.timingSafeEqual(Buffer.from(storedHash, 'hex'), Buffer.from(computedHash, 'hex'));
+    }
+
+    // Backward compatibility with existing plaintext records.
+    return plainPassword === storedPassword;
+}
+
+function isLegacyPlaintextPassword(storedPassword = '') {
+    return !storedPassword.startsWith('pbkdf2$');
+}
 
 /**
  * Creates the main application window
@@ -127,6 +154,27 @@ function createTables() {
                 }
                 console.log('✅ Checkouts table ready');
 
+                db.run(`
+                    CREATE TABLE IF NOT EXISTS books (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        isbn TEXT UNIQUE NOT NULL,
+                        title TEXT NOT NULL,
+                        author TEXT,
+                        cover_url TEXT,
+                        description TEXT,
+                        categories TEXT,
+                        copies_total INTEGER DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                `, (bookErr) => {
+                    if (bookErr) {
+                        console.error('❌ Error creating books table:', bookErr.message);
+                    } else {
+                        console.log('✅ Books table ready');
+                    }
+                });
+
                 // Create reading sessions table
                 db.run(`
                     CREATE TABLE IF NOT EXISTS reading_sessions (
@@ -191,7 +239,7 @@ function createDefaultAdmin() {
             if (row.count === 0) {
                 db.run(
                     'INSERT INTO users (username, password, userType) VALUES (?, ?, ?)',
-                    ['admin', 'admin123', 'admin'],
+                    ['admin', hashPassword('admin123'), 'admin'],
                     function(err) {
                         if (err) {
                             console.error('❌ Error creating admin user:', err.message);
@@ -245,6 +293,29 @@ function makeHttpsRequest(url) {
             reject(new Error('Request timeout after 10 seconds'));
         });
     });
+}
+
+function upsertBookRecord(book) {
+    if (!book || !book.isbn || book.isbn === 'No ISBN') return;
+    db.run(
+        `INSERT INTO books (isbn, title, author, cover_url, description, categories, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(isbn) DO UPDATE SET
+            title = excluded.title,
+            author = excluded.author,
+            cover_url = excluded.cover_url,
+            description = COALESCE(NULLIF(excluded.description, ''), books.description),
+            categories = COALESCE(NULLIF(excluded.categories, ''), books.categories),
+            updated_at = CURRENT_TIMESTAMP`,
+        [
+            book.isbn,
+            book.title || 'Unknown Title',
+            book.author || (Array.isArray(book.authors) ? book.authors.join(', ') : 'Unknown Author'),
+            book.coverUrl || book.cover_url || '',
+            book.description || '',
+            Array.isArray(book.categories) ? book.categories.join(', ') : (book.categories || '')
+        ]
+    );
 }
 
 /**
@@ -307,13 +378,17 @@ ipcMain.handle('login-user', async (event, username, password) => {
         }
         
         db.get(
-            'SELECT * FROM users WHERE username = ? AND password = ?',
-            [username, password],
+            'SELECT * FROM users WHERE username = ?',
+            [username],
             (err, row) => {
                 if (err) {
                     console.error('❌ Login database error:', err.message);
                     resolve({ success: false, error: 'Database error during login' });
-                } else if (row) {
+                } else if (row && verifyPassword(password, row.password)) {
+                    if (isLegacyPlaintextPassword(row.password)) {
+                        const upgradedHash = hashPassword(password);
+                        db.run('UPDATE users SET password = ? WHERE id = ?', [upgradedHash, row.id]);
+                    }
                     console.log(`✅ User logged in: ${username}`);
                     resolve({
                         success: true,
@@ -337,9 +412,14 @@ ipcMain.handle('login-user', async (event, username, password) => {
  */
 ipcMain.handle('register-user', async (event, username, password, userType = 'student') => {
     return new Promise((resolve, reject) => {
+        if (!password || password.length < PASSWORD_MIN_LENGTH) {
+            resolve({ success: false, error: `Password must be at least ${PASSWORD_MIN_LENGTH} characters` });
+            return;
+        }
+
         db.run(
             'INSERT INTO users (username, password, userType) VALUES (?, ?, ?)',
-            [username, password, userType],
+            [username, hashPassword(password), userType],
             function(err) {
                 if (err) {
                     if (err.message.includes('UNIQUE constraint failed')) {
@@ -420,11 +500,13 @@ ipcMain.handle('search-books', async (event, query) => {
                     description: volumeInfo.description || 'No description available',
                     publishedDate: volumeInfo.publishedDate || 'Unknown',
                     publisher: volumeInfo.publisher || 'Unknown',
-                    coverUrl: coverUrl
+                    coverUrl: coverUrl,
+                    categories: volumeInfo.categories || []
                 };
                 
                 console.log(`📖 Added: "${book.title}" by ${book.authors[0]}`);
                 books.push(book);
+                upsertBookRecord(book);
                 
             } catch (itemError) {
                 console.error('❌ Error processing book item:', itemError);
@@ -621,6 +703,7 @@ ipcMain.handle('checkout-book', async (event, userId, isbn, title, author, cover
                     console.error('❌ Checkout error:', err.message);
                     resolve({ success: false, error: 'Checkout failed: ' + err.message });
                 } else {
+                    upsertBookRecord({ isbn, title, author, coverUrl });
                     console.log(`✅ Book checked out: "${title}" by user ${userId}`);
                     resolve({ success: true, checkoutId: this.lastID });
                 }
@@ -698,6 +781,122 @@ ipcMain.handle('get-all-checkouts', async (event, searchQuery = '') => {
     });
 });
 
+ipcMain.handle('get-all-users-detailed', async () => {
+    return new Promise((resolve) => {
+        db.all(
+            'SELECT id, username, userType, createdAt FROM users ORDER BY createdAt DESC',
+            [],
+            (err, rows) => {
+                if (err) {
+                    console.error('❌ Error fetching users:', err.message);
+                    resolve([]);
+                } else {
+                    resolve(rows);
+                }
+            }
+        );
+    });
+});
+
+ipcMain.handle('get-library-books', async () => {
+    return new Promise((resolve) => {
+        const sql = `
+            SELECT
+                b.id,
+                b.isbn,
+                b.title,
+                b.author,
+                b.cover_url AS coverUrl,
+                b.description,
+                b.categories,
+                b.copies_total AS copiesTotal,
+                MAX(b.copies_total - COALESCE(active.active_count, 0), 0) AS availableCopies
+            FROM books b
+            LEFT JOIN (
+                SELECT isbn, COUNT(*) AS active_count
+                FROM checkouts
+                GROUP BY isbn
+            ) active ON active.isbn = b.isbn
+            GROUP BY b.id
+            ORDER BY b.updated_at DESC
+        `;
+        db.all(sql, [], (err, rows) => {
+            if (err) {
+                console.error('❌ Error fetching library books:', err.message);
+                resolve([]);
+            } else {
+                resolve(rows || []);
+            }
+        });
+    });
+});
+
+ipcMain.handle('get-user-book-suggestions', async (event, userId) => {
+    return new Promise((resolve) => {
+        const suggestionsSql = `
+            WITH user_history AS (
+                SELECT DISTINCT isbn, title, author FROM checkouts WHERE user_id = ?
+            ),
+            stats AS (
+                SELECT isbn, COUNT(*) AS checkout_count FROM checkouts GROUP BY isbn
+            ),
+            current_loans AS (
+                SELECT isbn, COUNT(*) AS active_count FROM checkouts GROUP BY isbn
+            )
+            SELECT
+                b.id,
+                b.isbn,
+                b.title,
+                b.author,
+                b.cover_url AS coverUrl,
+                b.description,
+                b.categories,
+                COALESCE(stats.checkout_count, 0) AS checkoutCount,
+                MAX(b.copies_total - COALESCE(current_loans.active_count, 0), 0) AS availableCopies,
+                CASE
+                    WHEN EXISTS (SELECT 1 FROM user_history uh WHERE LOWER(uh.author) = LOWER(b.author)) THEN 30
+                    WHEN EXISTS (SELECT 1 FROM user_history uh WHERE uh.title != b.title AND (LOWER(b.title) LIKE '%' || LOWER(uh.title) || '%' OR LOWER(COALESCE(b.description, '')) LIKE '%' || LOWER(uh.title) || '%')) THEN 15
+                    ELSE 0
+                END
+                + CASE WHEN MAX(b.copies_total - COALESCE(current_loans.active_count, 0), 0) > 0 THEN 10 ELSE 0 END
+                + COALESCE(stats.checkout_count, 0) AS score
+            FROM books b
+            LEFT JOIN stats ON stats.isbn = b.isbn
+            LEFT JOIN current_loans ON current_loans.isbn = b.isbn
+            WHERE b.isbn NOT IN (SELECT isbn FROM user_history)
+            GROUP BY b.id
+            ORDER BY score DESC, b.updated_at DESC
+            LIMIT 10
+        `;
+
+        db.all(suggestionsSql, [userId], (err, rows) => {
+            if (err) {
+                console.error('❌ Error loading suggestions:', err.message);
+                resolve({ suggestions: [], popular: [] });
+                return;
+            }
+
+            db.all(`
+                SELECT b.id, b.isbn, b.title, b.author, b.cover_url AS coverUrl, b.description,
+                       COALESCE(stats.checkout_count, 0) AS checkoutCount,
+                       MAX(b.copies_total - COALESCE(active.active_count, 0), 0) AS availableCopies
+                FROM books b
+                LEFT JOIN (SELECT isbn, COUNT(*) AS checkout_count FROM checkouts GROUP BY isbn) stats ON stats.isbn = b.isbn
+                LEFT JOIN (SELECT isbn, COUNT(*) AS active_count FROM checkouts GROUP BY isbn) active ON active.isbn = b.isbn
+                GROUP BY b.id
+                ORDER BY checkoutCount DESC, b.updated_at DESC
+                LIMIT 10
+            `, [], (popularErr, popularRows) => {
+                if (popularErr) {
+                    resolve({ suggestions: rows || [], popular: [] });
+                    return;
+                }
+                resolve({ suggestions: rows || [], popular: popularRows || [] });
+            });
+        });
+    });
+});
+
 /**
  * READ SOURCE FILE: Educational feature to show app source code
  */
@@ -753,11 +952,16 @@ ipcMain.handle('change-user-type', async (event, userId, newType) => {
  */
 ipcMain.handle('change-user-password', async (event, userId, newPassword) => {
     return new Promise((resolve, reject) => {
-        console.log(`🔄 Changing password for user ${userId}`);
+        console.log(`🔄 Admin password reset for user ${userId}`);
+
+        if (!newPassword || newPassword.length < PASSWORD_MIN_LENGTH) {
+            resolve({ success: false, error: `Password must be at least ${PASSWORD_MIN_LENGTH} characters` });
+            return;
+        }
         
         db.run(
             'UPDATE users SET password = ? WHERE id = ?',
-            [newPassword, userId],
+            [hashPassword(newPassword), userId],
             function(err) {
                 if (err) {
                     console.error('❌ Error changing password:', err.message);
@@ -905,33 +1109,6 @@ ipcMain.handle('set-reading-goal', async (event, userId, goalType, targetMinutes
     });
 });
 
-/**
- * GET READING STATS
- */
-ipcMain.handle('get-reading-stats', async (event, userId) => {
-    return new Promise((resolve, reject) => {
-        db.all(`
-            SELECT 
-                SUM(duration_minutes) as total_minutes,
-                COUNT(*) as session_count,
-                SUM(pages_read) as total_pages
-            FROM reading_sessions 
-            WHERE user_id = ? AND duration_minutes IS NOT NULL
-        `, [userId], (err, rows) => {
-            if (err) {
-                console.error('❌ Error getting reading stats:', err.message);
-                resolve({ totalMinutes: 0, sessionCount: 0, totalPages: 0 });
-            } else {
-                const stats = rows[0] || { total_minutes: 0, session_count: 0, total_pages: 0 };
-                resolve({
-                    totalMinutes: stats.total_minutes || 0,
-                    sessionCount: stats.session_count || 0,
-                    totalPages: stats.total_pages || 0
-                });
-            }
-        });
-    });
-});
 // =============================================================================
 // GET DETAILED READING STATS
 // =============================================================================
