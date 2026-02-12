@@ -21,6 +21,8 @@ let libraryBooks = [];
 let filteredLibraryBooks = [];
 let lastLibraryReturnSection = 'welcomeSection';
 let lastSuggestionReturnSection = 'welcomeSection';
+let passwordTargetUserId = null;
+let passwordTargetButton = null;
 
 // =============================================================================
 // UTILITY FUNCTIONS - Helper functions used throughout the application
@@ -572,42 +574,89 @@ async function changeUserType(userId, newType) {
  * CHANGE USER PASSWORD: Admin password reset
  * Allows admins to reset passwords for any user
  */
-async function changeUserPassword(userId, buttonElement) {
-    // Prompt for new password
-    const newPassword = prompt('Enter new password for this user:');
+function changeUserPassword(userId, buttonElement) {
+    passwordTargetUserId = userId;
+    passwordTargetButton = buttonElement || null;
+
+    const passwordInput = document.getElementById('adminNewPassword');
+    const confirmInput = document.getElementById('adminConfirmPassword');
+    const modal = document.getElementById('adminPasswordModal');
+
+    if (!passwordInput || !confirmInput || !modal) {
+        showMessage('adminMessage', 'Password dialog is unavailable. Please restart the app.', 'error');
+        return;
+    }
+
+    passwordInput.value = '';
+    confirmInput.value = '';
+    modal.style.display = 'flex';
+    passwordInput.focus();
+}
+
+function closeAdminPasswordModal(event) {
+    if (event && event.target && event.target.id !== 'adminPasswordModal') {
+        return;
+    }
+    const modal = document.getElementById('adminPasswordModal');
+    if (modal) modal.style.display = 'none';
+    passwordTargetUserId = null;
+    passwordTargetButton = null;
+}
+
+async function submitAdminPasswordChange() {
+    if (!passwordTargetUserId) {
+        showMessage('adminMessage', 'Please select a user before changing password.', 'error');
+        return;
+    }
+
+    const passwordInput = document.getElementById('adminNewPassword');
+    const confirmInput = document.getElementById('adminConfirmPassword');
+    const modalButton = document.getElementById('adminSavePasswordBtn');
+    const newPassword = passwordInput?.value || '';
+    const confirmPassword = confirmInput?.value || '';
+
     if (!newPassword) {
+        showMessage('adminMessage', 'Please enter a new password.', 'error');
         return;
     }
-    
-    // Validate password length
     if (newPassword.length < 6) {
-        alert('Password must be at least 6 characters long');
+        showMessage('adminMessage', 'Password must be at least 6 characters long.', 'error');
         return;
     }
-    
+    if (newPassword !== confirmPassword) {
+        showMessage('adminMessage', 'Password confirmation does not match.', 'error');
+        return;
+    }
+
     try {
-        debugLog(`Changing password for user ${userId}`);
-        if (buttonElement) {
-            buttonElement.disabled = true;
-            buttonElement.textContent = 'Saving...';
+        if (modalButton) {
+            modalButton.disabled = true;
+            modalButton.textContent = 'Saving...';
         }
-        
-        // Call backend to update password
-        const result = await window.electronAPI.changeUserPassword(userId, newPassword);
-        
+        if (passwordTargetButton) {
+            passwordTargetButton.disabled = true;
+            passwordTargetButton.textContent = 'Saving...';
+        }
+
+        const result = await window.electronAPI.changeUserPassword(passwordTargetUserId, newPassword);
         if (result.success) {
             showMessage('adminMessage', 'Password changed successfully', 'success');
-            loadAllUsers(); // Refresh the user list
+            closeAdminPasswordModal();
+            loadAllUsers();
         } else {
             showMessage('adminMessage', `Error: ${result.error}`, 'error');
         }
     } catch (error) {
-        debugLog('ERROR in changeUserPassword: ' + error.message);
+        debugLog('ERROR in submitAdminPasswordChange: ' + error.message);
         showMessage('adminMessage', 'Error changing password: ' + error.message, 'error');
     } finally {
-        if (buttonElement) {
-            buttonElement.disabled = false;
-            buttonElement.textContent = 'Change Password';
+        if (modalButton) {
+            modalButton.disabled = false;
+            modalButton.textContent = 'Save Password';
+        }
+        if (passwordTargetButton) {
+            passwordTargetButton.disabled = false;
+            passwordTargetButton.textContent = 'Change Password';
         }
     }
 }
