@@ -1061,15 +1061,18 @@ ipcMain.handle('delete-user', async (event, userId) => {
  * RETURN BOOK: Mark a book as returned
  */
 // RETURN BOOK: Hard-delete the checkout row by id (sqlite3 async)
-ipcMain.handle('return-book', async (event, { checkoutId }) => {
+ipcMain.handle('return-book', async (event, payload) => {
+  const checkoutId = typeof payload === 'object' && payload !== null ? payload.checkoutId : payload;
+
   return new Promise((resolve) => {
     db.run('DELETE FROM checkouts WHERE id = ?', [checkoutId], function (err) {
       if (err) {
         console.error('❌ Error deleting checkout:', err.message);
         resolve({ success: false, error: err.message });
+      } else if (this.changes === 0) {
+        resolve({ success: false, error: 'Checkout record not found' });
       } else {
-        // this.changes === 1 when a row was deleted
-        resolve({ success: this.changes === 1 });
+        resolve({ success: true });
       }
     });
   });
