@@ -450,7 +450,7 @@ ipcMain.handle('search-books', async (event, query) => {
         }
 
         const cleanQuery = query.trim();
-        const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=15&printType=books`;
+        const apiUrl = buildGoogleBooksApiUrl(encodeURIComponent(cleanQuery), '&maxResults=15&printType=books');
         
         const data = await makeHttpsRequest(apiUrl);
         
@@ -558,7 +558,7 @@ ipcMain.handle('get-book-suggestions', async (event, age, interests = []) => {
         const categories = [...ageCategories[ageGroup], ...interests];
         const randomCategory = categories[Math.floor(Math.random() * categories.length)];
         
-        const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=subject:${encodeURIComponent(randomCategory)}&maxResults=8&printType=books&langRestrict=en`;
+        const apiUrl = buildGoogleBooksApiUrl(`subject:${encodeURIComponent(randomCategory)}`, '&maxResults=8&printType=books&langRestrict=en');
         
         const data = await makeHttpsRequest(apiUrl);
         
@@ -757,12 +757,13 @@ ipcMain.handle('get-all-checkouts', async (event, searchQuery = '') => {
             SELECT c.*, u.username 
             FROM checkouts c 
             JOIN users u ON c.user_id = u.id 
+            WHERE c.returned = 0
         `;
         let params = [];
         
         // Add search filter if provided
         if (searchQuery && searchQuery.trim() !== '') {
-            sql += ` WHERE u.username LIKE ? OR c.title LIKE ? OR c.author LIKE ?`;
+            sql += ` AND (u.username LIKE ? OR c.title LIKE ? OR c.author LIKE ?)`;
             const searchTerm = `%${searchQuery.trim()}%`;
             params = [searchTerm, searchTerm, searchTerm];
         }
@@ -1021,15 +1022,18 @@ ipcMain.handle('delete-user', async (event, userId) => {
  * RETURN BOOK: Mark a book as returned
  */
 // RETURN BOOK: Hard-delete the checkout row by id (sqlite3 async)
-ipcMain.handle('return-book', async (event, { checkoutId }) => {
+ipcMain.handle('return-book', async (event, payload) => {
+  const checkoutId = typeof payload === 'object' && payload !== null ? payload.checkoutId : payload;
+
   return new Promise((resolve) => {
     db.run('DELETE FROM checkouts WHERE id = ?', [checkoutId], function (err) {
       if (err) {
         console.error('❌ Error deleting checkout:', err.message);
         resolve({ success: false, error: err.message });
+      } else if (this.changes === 0) {
+        resolve({ success: false, error: 'Checkout record not found' });
       } else {
-        // this.changes === 1 when a row was deleted
-        resolve({ success: this.changes === 1 });
+        resolve({ success: true });
       }
     });
   });

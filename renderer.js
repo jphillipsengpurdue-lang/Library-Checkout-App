@@ -862,14 +862,11 @@ async function loadAllCheckouts(searchQuery = '') {
                                 Due: ${new Date(checkout.due_date).toLocaleDateString()} |
                                 Checked out: ${new Date(checkout.checkout_date).toLocaleDateString()}
                             </small>
-                            ${checkout.returned ? '<br><span style="color: green;">✓ Returned on ' + new Date(checkout.return_date).toLocaleDateString() + '</span>' : ''}
                         </div>
-			${!checkout.returned ? `
-    				<button onclick="window.adminReturnBook(${checkout.id})" 
-            				style="background: #48bb78; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-left: 10px;">
-        				Mark Returned
-    				</button>
-			` : ''}
+			<button onclick="window.adminReturnBook(${checkout.id}, this)" 
+            			style="background: #48bb78; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-left: 10px;">
+				Mark Returned
+			</button>
                     </div>
                 `;
                 checkoutsContainer.appendChild(element);
@@ -1320,11 +1317,11 @@ function syntaxHighlight(code) {
 /**
  * Admin return book function - GLOBAL SCOPE VERSION
  */
-window.adminReturnBook = async function(checkoutId) {
+window.adminReturnBook = async function(checkoutId, buttonElement = null) {
     console.log('🎯 ADMIN RETURN BOOK CALLED WITH ID:', checkoutId);
     
     // Immediate feedback
-    const button = event?.target || document.querySelector(`[onclick*="${checkoutId}"]`);
+    const button = buttonElement || document.querySelector(`#checkout-${checkoutId} button`);
     if (button) {
         button.style.background = '#e53e3e';
         button.textContent = 'Returning...';
