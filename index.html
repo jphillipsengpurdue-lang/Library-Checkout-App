@@ -285,6 +285,37 @@
             color: white;
         }
 
+        .book-detail-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .book-detail-panel {
+            width: min(760px, 95vw);
+            max-height: 90vh;
+            overflow-y: auto;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            border: 2px solid #e2e8f0;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+
+        .library-list {
+            max-height: 380px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+
+        .book-list-item {
+            cursor: pointer;
+        }
+
         /* 
             SOURCE CODE VIEWER - Educational feature styling
             Dark theme is standard for code editors and easier on the eyes
@@ -585,6 +616,24 @@
                     <h3>Reading Stats</h3>
                     <p>View your reading progress and totals</p>
                 </div>
+                <div class="function-card" onclick="showLibrarySection('welcomeSection')">
+                    <span class="icon">🏛️</span>
+                    <h3>Library</h3>
+                    <p>Browse and search all books in the library repository</p>
+                </div>
+
+                <div class="function-card" onclick="showSuggestionsSection('welcomeSection')">
+                    <span class="icon">✨</span>
+                    <h3>Book Suggestions</h3>
+                    <p>See recommendations based on your checkout history</p>
+                </div>
+
+                <div class="function-card" onclick="showChangePassword('welcomeSection')">
+                    <span class="icon">🔐</span>
+                    <h3>Change Password</h3>
+                    <p>Update your account password securely</p>
+                </div>
+
                 <!-- 
                     LOGOUT CARD - Session management
                     Allows users to securely log out of the application
@@ -785,6 +834,24 @@
                     <p>Search and manage the library's book collection and inventory</p>
                 </div>
                 
+                <div class="function-card" onclick="showLibrarySection('adminSection')">
+                    <span class="icon">🏛️</span>
+                    <h3>Library</h3>
+                    <p>Search and inspect all stored books in your library catalog</p>
+                </div>
+
+                <div class="function-card" onclick="showSuggestionsSection('adminSection')">
+                    <span class="icon">✨</span>
+                    <h3>Book Suggestions</h3>
+                    <p>View personalized and popular recommendation lists</p>
+                </div>
+
+                <div class="function-card" onclick="showChangePassword('adminSection')">
+                    <span class="icon">🔐</span>
+                    <h3>Change My Password</h3>
+                    <p>Change the currently signed-in admin password</p>
+                </div>
+
                 <!-- 
                     USER VIEW CARD - Return to standard interface
                     Allows admins to switch back to the regular user view
@@ -874,6 +941,39 @@
                 <!-- Admin book results inserted dynamically by JavaScript -->
             </div>
         </section>
+
+        <section id="librarySection" class="section">
+            <h2>🏛️ Library</h2>
+            <p>Search the current repository of books by title, author, or ISBN.</p>
+            <input type="text" id="librarySearchInput" placeholder="Search by title, author, or ISBN" oninput="filterLibraryBooks()">
+            <div id="libraryList" class="library-list"></div>
+            <div style="text-align:center; margin-top: 20px;">
+                <button id="libraryBackBtn" onclick="showSection('welcomeSection')">Back</button>
+            </div>
+        </section>
+
+        <section id="suggestionsSection" class="section">
+            <h2>✨ Book Suggestions</h2>
+            <p id="suggestionsSummary">Recommendations based on checkout activity.</p>
+            <div id="suggestionsList" class="library-list"></div>
+            <div style="text-align:center; margin-top: 20px;">
+                <button id="suggestionsBackBtn" onclick="showSection('welcomeSection')">Back</button>
+            </div>
+        </section>
+
+        <section id="changePasswordSection" class="section">
+            <h2>🔐 Change Password</h2>
+            <form onsubmit="event.preventDefault(); submitOwnPasswordChange();">
+                <input type="password" id="currentPasswordInput" placeholder="Current password" required>
+                <input type="password" id="newPasswordInput" placeholder="New password (min 6 chars)" required>
+                <input type="password" id="confirmPasswordInput" placeholder="Confirm new password" required>
+                <div style="text-align:center; margin-top: 15px;">
+                    <button id="changePasswordBtn" type="submit">Save Password</button>
+                    <button id="changePasswordBackBtn" type="button" class="secondary" onclick="showSection('welcomeSection')">Back</button>
+                </div>
+            </form>
+            <div id="changePasswordMessage" class="message"></div>
+        </section>
         <section id="readingTimerSection" class="section">
             <h2>⏱️ Reading Timer</h2>
 
@@ -921,6 +1021,15 @@
                 <button onclick="showSection('welcomeSection')">Back</button>
             </div>
         </section>
+    </div>
+
+    <div id="bookDetailOverlay" class="book-detail-overlay" onclick="closeBookDetail(event)">
+        <div class="book-detail-panel" onclick="event.stopPropagation()">
+            <div id="bookDetailContent"></div>
+            <div style="text-align:right; margin-top:12px;">
+                <button class="secondary" onclick="closeBookDetail()">Close</button>
+            </div>
+        </div>
     </div>
 
     <!-- 

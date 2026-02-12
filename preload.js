@@ -33,8 +33,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAllCheckouts: (searchQuery) => ipcRenderer.invoke('get-all-checkouts', searchQuery),
     changeUserType: (userId, newType) => ipcRenderer.invoke('change-user-type', userId, newType),
     changeUserPassword: (userId, newPassword) => ipcRenderer.invoke('change-user-password', userId, newPassword),
+    changeOwnPassword: (payload) => ipcRenderer.invoke('change-own-password', payload),
     deleteUser: (userId) => ipcRenderer.invoke('delete-user', userId),
     returnBook: (checkoutId) => ipcRenderer.invoke('return-book', checkoutId),
+    getLibraryBooks: () => ipcRenderer.invoke('get-library-books'),
+    getUserBookSuggestions: (userId) => ipcRenderer.invoke('get-user-book-suggestions', userId),
     
     /**
      * EDUCATIONAL FUNCTIONS
