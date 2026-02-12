@@ -1113,33 +1113,6 @@ ipcMain.handle('set-reading-goal', async (event, userId, goalType, targetMinutes
     });
 });
 
-/**
- * GET READING STATS
- */
-ipcMain.handle('get-reading-stats', async (event, userId) => {
-    return new Promise((resolve, reject) => {
-        db.all(`
-            SELECT 
-                SUM(duration_minutes) as total_minutes,
-                COUNT(*) as session_count,
-                SUM(pages_read) as total_pages
-            FROM reading_sessions 
-            WHERE user_id = ? AND duration_minutes IS NOT NULL
-        `, [userId], (err, rows) => {
-            if (err) {
-                console.error('❌ Error getting reading stats:', err.message);
-                resolve({ totalMinutes: 0, sessionCount: 0, totalPages: 0 });
-            } else {
-                const stats = rows[0] || { total_minutes: 0, session_count: 0, total_pages: 0 };
-                resolve({
-                    totalMinutes: stats.total_minutes || 0,
-                    sessionCount: stats.session_count || 0,
-                    totalPages: stats.total_pages || 0
-                });
-            }
-        });
-    });
-});
 // =============================================================================
 // GET DETAILED READING STATS
 // =============================================================================

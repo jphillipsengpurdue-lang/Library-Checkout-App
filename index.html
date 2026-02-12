@@ -78,6 +78,10 @@
             margin: 40px 0;
         }
 
+        .user-card-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         /* 
             FUNCTION CARDS - Interactive cards that replace traditional buttons
             Each card represents a different application feature
@@ -420,6 +424,10 @@
                 gap: 15px;
                 margin: 25px 0;
             }
+
+            .user-card-grid {
+                grid-template-columns: 1fr;
+            }
             
             .function-card {
                 padding: 20px 15px;
@@ -578,67 +586,23 @@
                 CSS Grid creates responsive layout of function cards
                 that provide intuitive access to all application features
             -->
-            <div class="card-grid">
-                <!-- 
-                    CHECKOUT CARD - Book borrowing functionality
-                    Provides access to the book search and checkout system
-                -->
+            <div class="card-grid user-card-grid">
+                <div class="function-card" onclick="showLibrarySection('welcomeSection')">
+                    <span class="icon">🏛️</span>
+                    <h3>Library</h3>
+                    <p>Browse and search all books in the library repository</p>
+                </div>
+
                 <div class="function-card" onclick="showSection('checkoutSection')">
                     <span class="icon">📖</span>
                     <h3>Check Out a Book</h3>
                     <p>Search for and borrow new books from our library collection</p>
                 </div>
-                
-                <!-- 
-                    MY BOOKS CARD - Personal library management
-                    Shows currently checked out books and reading history
-                -->
+
                 <div class="function-card" onclick="loadMyCheckouts()">
                     <span class="icon">📚</span>
                     <h3>View My Books</h3>
                     <p>See your currently checked out books and reading history</p>
-                </div>
-                
-                <!-- 
-                    LEARN CODE CARD - Educational feature
-                    Provides access to the source code exploration feature
-                -->
-                <div class="function-card" onclick="showSection('learnToCodeSection')">
-                    <span class="icon">💻</span>
-                    <h3>Explore Source Code</h3>
-                    <p>Learn how this application works by exploring the code behind it</p>
-                </div>
-                <!-- 
-                    WORD HELPER CARD - Vocabulary assistance
-                    Helps users with word definitions and pronunciations
-                -->
-                <div class="function-card" onclick="showSection('wordHelperSection')">
-                    <span class="icon">🧠</span>
-                    <h3>Word Helper</h3>
-                    <p>Learn a word you need help with</p>
-                </div>
-                <!-- 
-                    READING TIMER CARD - Reading time tracking
-                    Allows users to track their reading sessions
-                -->
-                <div class="function-card" onclick="showSection('readingTimerSection')">
-                    <span class="icon">⏱️</span>
-                    <h3>Reading Timer</h3>
-                    <p>Track your reading time and pages read</p>
-                </div>
-                <!-- 
-                    READING STATS CARD - Progress monitoring
-                    Displays user's reading statistics and achievements
-                -->
-                <div class="function-card" onclick="showSection('readingStatsSection')">
-                    <span class="icon">📊</span>
-                    <h3>Reading Stats</h3>
-                    <p>View your reading progress and totals</p>
-                </div>
-                <div class="function-card" onclick="showLibrarySection('welcomeSection')">
-                    <span class="icon">🏛️</span>
-                    <h3>Library</h3>
-                    <p>Browse and search all books in the library repository</p>
                 </div>
 
                 <div class="function-card" onclick="showSuggestionsSection('welcomeSection')">
@@ -647,11 +611,31 @@
                     <p>See recommendations based on your checkout history</p>
                 </div>
 
+                <div class="function-card" onclick="showSection('readingTimerSection')">
+                    <span class="icon">⏱️</span>
+                    <h3>Reading Timer</h3>
+                    <p>Track your reading time and pages read</p>
+                </div>
 
-                <!-- 
-                    LOGOUT CARD - Session management
-                    Allows users to securely log out of the application
-                -->
+                <div class="function-card" onclick="showSection('readingStatsSection')">
+                    <span class="icon">📊</span>
+                    <h3>Reading Stats</h3>
+                    <p>View your reading progress and totals</p>
+                </div>
+
+                <div class="function-card" onclick="showSection('wordHelperSection')">
+                    <span class="icon">🧠</span>
+                    <h3>Word Helper</h3>
+                    <p>Learn a word you need help with</p>
+                </div>
+
+                <div class="function-card" onclick="showSection('learnToCodeSection')">
+                    <span class="icon">💻</span>
+                    <h3>Explore Source Code</h3>
+                    <p>Learn how this application works by exploring the code behind it</p>
+                </div>
+
+
                 <div class="function-card" onclick="logout()">
                     <span class="icon">🚪</span>
                     <h3>Logout</h3>
