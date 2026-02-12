@@ -17,6 +17,11 @@
  * Tracks the currently logged-in user throughout the app session
  */
 let currentUser = null;
+let libraryBooks = [];
+let filteredLibraryBooks = [];
+let lastLibraryReturnSection = 'welcomeSection';
+let lastSuggestionReturnSection = 'welcomeSection';
+let lastPasswordReturnSection = 'welcomeSection';
 
 // =============================================================================
 // UTILITY FUNCTIONS - Helper functions used throughout the application
@@ -474,10 +479,6 @@ async function loadAllUsers() {
                     <input type="text" id="userSearch" placeholder="🔍 Search users by username or ID..." 
                            style="padding: 10px; flex-grow: 1; border: 2px solid #cbd5e0; border-radius: 10px; font-size: 1.1em;"
                            onkeyup="filterUsers()">
-                    <button onclick="showActualPasswords()" 
-                            style="padding: 10px 15px; background: #4a5568; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        👁️ Show All Passwords
-                    </button>
                 </div>
                 <div id="usersContainer"></div>
             `;
@@ -498,13 +499,7 @@ async function loadAllUsers() {
                             </span>
                             <br>
                             <small style="color: #718096;">
-                                ID: ${user.id} | 
-                                Password: <span class="password-field">••••••••</span>
-                                <button class="toggle-password" onclick="togglePasswordVisibility(${user.id}, '${user.password}')" 
-                                        style="margin-left: 5px; background: none; border: 1px solid #cbd5e0; border-radius: 3px; cursor: pointer; font-size: 0.8em; padding: 2px 6px;">
-                                    👁️ Show
-                                </button>
-                                | Joined: ${new Date(user.createdAt).toLocaleDateString()}
+                                ID: ${user.id} | Joined: ${new Date(user.createdAt).toLocaleDateString()}
                             </small>
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 5px; margin-left: 15px;">
@@ -514,7 +509,7 @@ async function loadAllUsers() {
                                 <option value="admin" ${user.userType === 'admin' ? 'selected' : ''}>Admin</option>
                             </select>
                             
-                            <button onclick="changeUserPassword(${user.id})" 
+                            <button onclick="changeUserPassword(${user.id}, this)" 
                                     style="padding: 5px 10px; font-size: 0.8em; background: #d69e2e; color: white; border: none; border-radius: 5px; cursor: pointer;">
                                 Change Password
                             </button>
@@ -578,7 +573,7 @@ async function changeUserType(userId, newType) {
  * CHANGE USER PASSWORD: Admin password reset
  * Allows admins to reset passwords for any user
  */
-async function changeUserPassword(userId) {
+async function changeUserPassword(userId, buttonElement) {
     // Prompt for new password
     const newPassword = prompt('Enter new password for this user:');
     if (!newPassword) {
@@ -593,6 +588,10 @@ async function changeUserPassword(userId) {
     
     try {
         debugLog(`Changing password for user ${userId}`);
+        if (buttonElement) {
+            buttonElement.disabled = true;
+            buttonElement.textContent = 'Saving...';
+        }
         
         // Call backend to update password
         const result = await window.electronAPI.changeUserPassword(userId, newPassword);
@@ -606,6 +605,11 @@ async function changeUserPassword(userId) {
     } catch (error) {
         debugLog('ERROR in changeUserPassword: ' + error.message);
         showMessage('adminMessage', 'Error changing password: ' + error.message, 'error');
+    } finally {
+        if (buttonElement) {
+            buttonElement.disabled = false;
+            buttonElement.textContent = 'Change Password';
+        }
     }
 }
 
@@ -662,61 +666,156 @@ function filterUsers() {
  * TOGGLE PASSWORD VISIBILITY: Show/hide user passwords
  * Educational feature to see how passwords are stored
  */
-function togglePasswordVisibility(userId, actualPassword) {
-    const passwordField = document.querySelector(`#user-${userId} .password-field`);
-    const toggleButton = document.querySelector(`#user-${userId} .toggle-password`);
-    
-    if (passwordField && toggleButton) {
-        if (passwordField.textContent === '••••••••') {
-            // Show actual password (for educational purposes)
-            passwordField.textContent = actualPassword;
-            toggleButton.textContent = '👁️ Hide';
-            toggleButton.style.background = '#e53e3e';
-            toggleButton.style.color = 'white';
-        } else {
-            // Hide password
-            passwordField.textContent = '••••••••';
-            toggleButton.textContent = '👁️ Show';
-            toggleButton.style.background = '';
-            toggleButton.style.color = '';
-        }
-    }
+async function showLibrarySection(returnSection = 'welcomeSection') {
+    lastLibraryReturnSection = returnSection;
+    const backBtn = document.getElementById('libraryBackBtn');
+    if (backBtn) backBtn.setAttribute('onclick', `showSection('${returnSection}')`);
+    showSection('librarySection');
+    await loadLibraryBooks();
 }
 
-/**
- * SHOW ACTUAL PASSWORDS: Reveal all passwords at once
- * Useful for admin troubleshooting and education
- */
-async function showActualPasswords() {
+async function loadLibraryBooks() {
+    libraryBooks = await window.electronAPI.getLibraryBooks();
+    filteredLibraryBooks = [...libraryBooks];
+    renderBookList('libraryList', filteredLibraryBooks);
+}
+
+function filterLibraryBooks() {
+    const query = (document.getElementById('librarySearchInput')?.value || '').toLowerCase().trim();
+    filteredLibraryBooks = libraryBooks.filter(book => {
+        return [book.title, book.author, book.isbn].some(value => (value || '').toLowerCase().includes(query));
+    });
+    renderBookList('libraryList', filteredLibraryBooks);
+}
+
+async function showSuggestionsSection(returnSection = 'welcomeSection') {
+    if (!currentUser) return;
+    lastSuggestionReturnSection = returnSection;
+    const backBtn = document.getElementById('suggestionsBackBtn');
+    if (backBtn) backBtn.setAttribute('onclick', `showSection('${returnSection}')`);
+    showSection('suggestionsSection');
+
+    const response = await window.electronAPI.getUserBookSuggestions(currentUser.id);
+    const suggestions = response.suggestions || [];
+    const popular = response.popular || [];
+    const list = suggestions.length > 0 ? suggestions : popular;
+
+    const summary = document.getElementById('suggestionsSummary');
+    if (summary) {
+        summary.textContent = suggestions.length > 0
+            ? 'Recommended based on your checkout history (author/topic overlap and availability).'
+            : 'No personal history yet, showing popular books as a fallback.';
+    }
+
+    renderBookList('suggestionsList', list);
+}
+
+function renderBookList(containerId, books) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!books || books.length === 0) {
+        container.innerHTML = '<p>No books available.</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+    books.forEach(book => {
+        const item = document.createElement('div');
+        item.className = 'checkout-item book-list-item';
+        item.innerHTML = `
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div class="book-cover">${book.coverUrl ? `<img src="${book.coverUrl}" style="width:100%;height:100%;object-fit:cover;" alt="${book.title}">` : '📖'}</div>
+                <div>
+                    <strong>${book.title}</strong><br>
+                    <em>${book.author || 'Unknown Author'}</em><br>
+                    <small>ISBN: ${book.isbn || 'N/A'}</small>
+                </div>
+            </div>
+        `;
+        item.addEventListener('click', () => openBookDetail(book));
+        container.appendChild(item);
+    });
+}
+
+function openBookDetail(book) {
+    const overlay = document.getElementById('bookDetailOverlay');
+    const content = document.getElementById('bookDetailContent');
+    if (!overlay || !content) return;
+    content.innerHTML = `
+        <div style="display:flex; gap:16px; align-items:flex-start;">
+            <div class="book-cover" style="width:140px;height:190px;">
+                ${book.coverUrl ? `<img src="${book.coverUrl}" style="width:100%;height:100%;object-fit:cover;" alt="${book.title}">` : '📖'}
+            </div>
+            <div>
+                <h3 style="margin-top:0;">${book.title}</h3>
+                <p><strong>Author:</strong> ${book.author || 'Unknown Author'}</p>
+                <p><strong>ISBN:</strong> ${book.isbn || 'N/A'}</p>
+                <p><strong>Available Copies:</strong> ${book.availableCopies ?? 'N/A'}</p>
+                <p><strong>Description:</strong> ${book.description || 'No description available for this title yet.'}</p>
+            </div>
+        </div>
+    `;
+    overlay.style.display = 'flex';
+}
+
+function closeBookDetail(event) {
+    if (event && event.target && event.target.id !== 'bookDetailOverlay') return;
+    const overlay = document.getElementById('bookDetailOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function showChangePassword(returnSection = 'welcomeSection') {
+    lastPasswordReturnSection = returnSection;
+    const backBtn = document.getElementById('changePasswordBackBtn');
+    if (backBtn) backBtn.setAttribute('onclick', `showSection('${returnSection}')`);
+    document.getElementById('currentPasswordInput').value = '';
+    document.getElementById('newPasswordInput').value = '';
+    document.getElementById('confirmPasswordInput').value = '';
+    document.getElementById('changePasswordMessage').style.display = 'none';
+    showSection('changePasswordSection');
+}
+
+async function submitOwnPasswordChange() {
+    if (!currentUser) return;
+
+    const currentPassword = document.getElementById('currentPasswordInput').value;
+    const newPassword = document.getElementById('newPasswordInput').value;
+    const confirmPassword = document.getElementById('confirmPasswordInput').value;
+    const button = document.getElementById('changePasswordBtn');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showMessage('changePasswordMessage', 'All password fields are required', 'error');
+        return;
+    }
+    if (newPassword.length < 6) {
+        showMessage('changePasswordMessage', 'New password must be at least 6 characters', 'error');
+        return;
+    }
+    if (newPassword !== confirmPassword) {
+        showMessage('changePasswordMessage', 'New password and confirmation do not match', 'error');
+        return;
+    }
+
     try {
-        debugLog('Showing all passwords');
-        
-        // Get all users with their passwords
-        const users = await window.electronAPI.getAllUsersDetailed();
-        const passwordFields = document.querySelectorAll('.password-field');
-        const toggleButtons = document.querySelectorAll('.toggle-password');
-        
-        // Update all password fields to show actual passwords
-        passwordFields.forEach((field, index) => {
-            if (index < users.length) {
-                const user = users[index];
-                field.textContent = user.password;
-            }
+        button.disabled = true;
+        button.textContent = 'Saving...';
+        const result = await window.electronAPI.changeOwnPassword({
+            userId: currentUser.id,
+            currentPassword,
+            newPassword
         });
-        
-        // Update all toggle buttons to "Hide" state
-        toggleButtons.forEach(button => {
-            button.textContent = '👁️ Hide';
-            button.style.background = '#e53e3e';
-            button.style.color = 'white';
-        });
-        
-        showMessage('adminMessage', 'All passwords revealed', 'success');
-        
+
+        if (result.success) {
+            showMessage('changePasswordMessage', 'Password changed successfully', 'success');
+            setTimeout(() => showSection(lastPasswordReturnSection), 800);
+        } else {
+            showMessage('changePasswordMessage', result.error || 'Unable to change password', 'error');
+        }
     } catch (error) {
-        debugLog('ERROR in showActualPasswords: ' + error.message);
-        console.error('Error showing passwords:', error);
-        showMessage('adminMessage', 'Error loading passwords', 'error');
+        showMessage('changePasswordMessage', 'Password update failed: ' + error.message, 'error');
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Save Password';
     }
 }
 
