@@ -798,40 +798,6 @@ ipcMain.handle('get-all-users-detailed', async () => {
     });
 });
 
-ipcMain.handle('change-own-password', async (event, payload) => {
-    const { userId, currentPassword, newPassword } = payload || {};
-    return new Promise((resolve) => {
-        if (!userId || !currentPassword || !newPassword) {
-            resolve({ success: false, error: 'All password fields are required' });
-            return;
-        }
-        if (newPassword.length < PASSWORD_MIN_LENGTH) {
-            resolve({ success: false, error: `New password must be at least ${PASSWORD_MIN_LENGTH} characters` });
-            return;
-        }
-
-        db.get('SELECT id, password FROM users WHERE id = ?', [userId], (err, row) => {
-            if (err || !row) {
-                resolve({ success: false, error: 'User not found' });
-                return;
-            }
-
-            if (!verifyPassword(currentPassword, row.password)) {
-                resolve({ success: false, error: 'Current password is incorrect' });
-                return;
-            }
-
-            db.run('UPDATE users SET password = ? WHERE id = ?', [hashPassword(newPassword), userId], function(updateErr) {
-                if (updateErr) {
-                    resolve({ success: false, error: 'Failed to update password' });
-                } else {
-                    resolve({ success: true });
-                }
-            });
-        });
-    });
-});
-
 ipcMain.handle('get-library-books', async () => {
     return new Promise((resolve) => {
         const sql = `

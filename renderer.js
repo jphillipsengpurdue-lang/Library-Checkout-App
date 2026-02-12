@@ -21,7 +21,6 @@ let libraryBooks = [];
 let filteredLibraryBooks = [];
 let lastLibraryReturnSection = 'welcomeSection';
 let lastSuggestionReturnSection = 'welcomeSection';
-let lastPasswordReturnSection = 'welcomeSection';
 
 // =============================================================================
 // UTILITY FUNCTIONS - Helper functions used throughout the application
@@ -581,8 +580,8 @@ async function changeUserPassword(userId, buttonElement) {
     }
     
     // Validate password length
-    if (newPassword.length < 3) {
-        alert('Password must be at least 3 characters long');
+    if (newPassword.length < 6) {
+        alert('Password must be at least 6 characters long');
         return;
     }
     
@@ -663,9 +662,6 @@ function filterUsers() {
 }
 
 /**
- * TOGGLE PASSWORD VISIBILITY: Show/hide user passwords
- * Educational feature to see how passwords are stored
- */
 async function showLibrarySection(returnSection = 'welcomeSection') {
     lastLibraryReturnSection = returnSection;
     const backBtn = document.getElementById('libraryBackBtn');
@@ -762,61 +758,6 @@ function closeBookDetail(event) {
     if (event && event.target && event.target.id !== 'bookDetailOverlay') return;
     const overlay = document.getElementById('bookDetailOverlay');
     if (overlay) overlay.style.display = 'none';
-}
-
-function showChangePassword(returnSection = 'welcomeSection') {
-    lastPasswordReturnSection = returnSection;
-    const backBtn = document.getElementById('changePasswordBackBtn');
-    if (backBtn) backBtn.setAttribute('onclick', `showSection('${returnSection}')`);
-    document.getElementById('currentPasswordInput').value = '';
-    document.getElementById('newPasswordInput').value = '';
-    document.getElementById('confirmPasswordInput').value = '';
-    document.getElementById('changePasswordMessage').style.display = 'none';
-    showSection('changePasswordSection');
-}
-
-async function submitOwnPasswordChange() {
-    if (!currentUser) return;
-
-    const currentPassword = document.getElementById('currentPasswordInput').value;
-    const newPassword = document.getElementById('newPasswordInput').value;
-    const confirmPassword = document.getElementById('confirmPasswordInput').value;
-    const button = document.getElementById('changePasswordBtn');
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-        showMessage('changePasswordMessage', 'All password fields are required', 'error');
-        return;
-    }
-    if (newPassword.length < 6) {
-        showMessage('changePasswordMessage', 'New password must be at least 6 characters', 'error');
-        return;
-    }
-    if (newPassword !== confirmPassword) {
-        showMessage('changePasswordMessage', 'New password and confirmation do not match', 'error');
-        return;
-    }
-
-    try {
-        button.disabled = true;
-        button.textContent = 'Saving...';
-        const result = await window.electronAPI.changeOwnPassword({
-            userId: currentUser.id,
-            currentPassword,
-            newPassword
-        });
-
-        if (result.success) {
-            showMessage('changePasswordMessage', 'Password changed successfully', 'success');
-            setTimeout(() => showSection(lastPasswordReturnSection), 800);
-        } else {
-            showMessage('changePasswordMessage', result.error || 'Unable to change password', 'error');
-        }
-    } catch (error) {
-        showMessage('changePasswordMessage', 'Password update failed: ' + error.message, 'error');
-    } finally {
-        button.disabled = false;
-        button.textContent = 'Save Password';
-    }
 }
 
 // =============================================================================
