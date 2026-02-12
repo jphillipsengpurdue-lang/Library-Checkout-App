@@ -26,45 +26,6 @@ let mainWindow;
 
 const PASSWORD_MIN_LENGTH = 6;
 
-function loadEnvFile() {
-    const envPath = path.join(__dirname, '.env');
-
-    if (!fs.existsSync(envPath)) {
-        return;
-    }
-
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    const lines = envContent.split(/\r?\n/);
-
-    for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) {
-            continue;
-        }
-
-        const separatorIndex = trimmed.indexOf('=');
-        if (separatorIndex === -1) {
-            continue;
-        }
-
-        const key = trimmed.slice(0, separatorIndex).trim();
-        const rawValue = trimmed.slice(separatorIndex + 1).trim();
-        const value = rawValue.replace(/^['\"]|['\"]$/g, '');
-
-        if (key && process.env[key] === undefined) {
-            process.env[key] = value;
-        }
-    }
-}
-
-loadEnvFile();
-
-function buildGoogleBooksApiUrl(baseQuery, extraParams = '') {
-    const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
-    const keyParam = apiKey ? `&key=${encodeURIComponent(apiKey)}` : '';
-    return `https://www.googleapis.com/books/v1/volumes?q=${baseQuery}${extraParams}${keyParam}`;
-}
-
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
     const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
     return `pbkdf2$${salt}$${hash}`;

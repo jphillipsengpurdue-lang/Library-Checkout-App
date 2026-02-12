@@ -711,6 +711,8 @@ function filterUsers() {
 }
 
 /**
+ * LIBRARY SECTION: Show searchable in-app library card content
+ */
 async function showLibrarySection(returnSection = 'welcomeSection') {
     lastLibraryReturnSection = returnSection;
     const backBtn = document.getElementById('libraryBackBtn');
