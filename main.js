@@ -118,6 +118,7 @@ function createTables() {
         db.run(`
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 userType TEXT DEFAULT 'student',
@@ -130,6 +131,33 @@ function createTables() {
                 return;
             }
             console.log('✅ Users table ready');
+
+            db.all(`PRAGMA table_info(users)`, [], (schemaErr, columns) => {
+                if (schemaErr) {
+                    console.error('❌ Error checking users table schema:', schemaErr.message);
+                    reject(schemaErr);
+                    return;
+                }
+
+                const hasNameColumn = Array.isArray(columns) && columns.some((column) => column.name === 'name');
+                if (!hasNameColumn) {
+                    db.run(`ALTER TABLE users ADD COLUMN name TEXT`, (alterErr) => {
+                        if (alterErr) {
+                            console.error('❌ Error adding name column to users table:', alterErr.message);
+                            reject(alterErr);
+                            return;
+                        }
+                        console.log('✅ Added name column to users table');
+                        continueCreatingTables();
+                    });
+                    return;
+                }
+
+                continueCreatingTables();
+            });
+        });
+
+        function continueCreatingTables() {
             
             // Create checkouts table
             db.run(`
@@ -220,7 +248,7 @@ function createTables() {
                         .catch(err => reject(err));
                 });
             });
-        });
+        }
     });
 }
 
@@ -238,8 +266,8 @@ function createDefaultAdmin() {
             
             if (row.count === 0) {
                 db.run(
-                    'INSERT INTO users (username, password, userType) VALUES (?, ?, ?)',
-                    ['admin', hashPassword('admin123'), 'admin'],
+                    'INSERT INTO users (name, username, password, userType) VALUES (?, ?, ?, ?)',
+                    ['Administrator', 'admin', hashPassword('admin123'), 'admin'],
                     function(err) {
                         if (err) {
                             console.error('❌ Error creating admin user:', err.message);
@@ -410,16 +438,22 @@ ipcMain.handle('login-user', async (event, username, password) => {
 /**
  * USER REGISTRATION: Create new student accounts
  */
-ipcMain.handle('register-user', async (event, username, password, userType = 'student') => {
+ipcMain.handle('register-user', async (event, name, username, password, userType = 'student') => {
     return new Promise((resolve, reject) => {
         if (!password || password.length < PASSWORD_MIN_LENGTH) {
             resolve({ success: false, error: `Password must be at least ${PASSWORD_MIN_LENGTH} characters` });
             return;
         }
 
+        const trimmedName = (name || '').trim();
+        if (!trimmedName) {
+            resolve({ success: false, error: 'Name is required' });
+            return;
+        }
+
         db.run(
-            'INSERT INTO users (username, password, userType) VALUES (?, ?, ?)',
-            [username, hashPassword(password), userType],
+            'INSERT INTO users (name, username, password, userType) VALUES (?, ?, ?, ?)',
+            [trimmedName, username, hashPassword(password), userType],
             function(err) {
                 if (err) {
                     if (err.message.includes('UNIQUE constraint failed')) {
@@ -785,7 +819,7 @@ ipcMain.handle('get-all-checkouts', async (event, searchQuery = '') => {
 ipcMain.handle('get-all-users-detailed', async () => {
     return new Promise((resolve) => {
         db.all(
-            'SELECT id, username, userType, createdAt FROM users ORDER BY createdAt DESC',
+            'SELECT id, name, username, userType, createdAt FROM users ORDER BY createdAt DESC',
             [],
             (err, rows) => {
                 if (err) {
