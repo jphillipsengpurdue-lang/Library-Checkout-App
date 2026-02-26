@@ -17,7 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
      * USER MANAGEMENT FUNCTIONS
      */
     loginUser: (username, password) => ipcRenderer.invoke('login-user', username, password),
-    registerUser: (username, password, userType) => ipcRenderer.invoke('register-user', username, password, userType),
+    registerUser: (name, username, password, userType) => ipcRenderer.invoke('register-user', name, username, password, userType),
     
     /**
      * BOOK MANAGEMENT FUNCTIONS  

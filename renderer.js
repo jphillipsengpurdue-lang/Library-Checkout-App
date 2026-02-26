@@ -222,12 +222,13 @@ async function login() {
  */
 async function register() {
     // Get values from registration form
+    const name = document.getElementById('regName').value.trim();
     const username = document.getElementById('regUsername').value.trim();
     const password = document.getElementById('regPassword').value.trim();
     
-    // Validate that both fields are filled
-    if (!username || !password) {
-        showMessage('regMessage', 'Please enter both username and password', 'error');
+    // Validate that all required fields are filled
+    if (!name || !username || !password) {
+        showMessage('regMessage', 'Please enter your name, username, and password', 'error');
         return;
     }
     
@@ -236,13 +237,14 @@ async function register() {
         showMessage('regMessage', 'Creating account...', 'info');
         
         // Call backend to create new user (defaults to student type)
-        const result = await window.electronAPI.registerUser(username, password, 'student');
+        const result = await window.electronAPI.registerUser(name, username, password, 'student');
         
         if (result.success) {
             // Registration successful
             showMessage('regMessage', 'Account created! Redirecting to login...', 'success');
             
             // Clear form data
+            document.getElementById('regName').value = '';
             document.getElementById('regUsername').value = '';
             document.getElementById('regPassword').value = '';
             
@@ -477,7 +479,7 @@ async function loadAllUsers() {
             // Create searchable user list with management controls
             container.innerHTML = `
                 <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="userSearch" placeholder="🔍 Search users by username or ID..." 
+                    <input type="text" id="userSearch" placeholder="🔍 Search users by name, username, or ID..." 
                            style="padding: 10px; flex-grow: 1; border: 2px solid #cbd5e0; border-radius: 10px; font-size: 1.1em;"
                            onkeyup="filterUsers()">
                 </div>
@@ -491,9 +493,14 @@ async function loadAllUsers() {
                 const element = document.createElement('div');
                 element.className = 'user-item';
                 element.id = `user-${user.id}`;
+                const safeDisplayName = user.name && user.name.trim() ? user.name : 'No name provided';
+                element.dataset.name = safeDisplayName.toLowerCase();
+                element.dataset.username = (user.username || '').toLowerCase();
+                element.dataset.userId = String(user.id);
                 element.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div style="flex-grow: 1;">
+                            <div style="font-size: 1.1em; color: #2d3748; margin-bottom: 2px;">${safeDisplayName}</div>
                             <strong style="font-size: 1.2em;">${user.username}</strong>
                             <span class="user-type-badge ${user.userType}">
                                 ${user.userType.toUpperCase()}
@@ -699,10 +706,11 @@ function filterUsers() {
     
     // Show/hide users based on search term
     userItems.forEach(item => {
-        const username = item.querySelector('strong').textContent.toLowerCase();
-        const userId = item.id.replace('user-', '');
+        const displayName = item.dataset.name || '';
+        const username = item.dataset.username || '';
+        const userId = item.dataset.userId || '';
         
-        if (username.includes(searchTerm) || userId.includes(searchTerm)) {
+        if (displayName.includes(searchTerm) || username.includes(searchTerm) || userId.includes(searchTerm)) {
             item.style.display = 'block';
         } else {
             item.style.display = 'none';
