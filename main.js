@@ -11,8 +11,31 @@
  * SQLite3 is a reliable, file-based database that works well with Electron.
  */
 
-const { app, BrowserWindow, ipcMain } = require('electron');
-const sqlite3 = require('sqlite3').verbose();
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+let sqlite3;
+let sqliteLoadFailed = false;
+
+try {
+    sqlite3 = require('sqlite3').verbose();
+} catch (sqliteLoadError) {
+    sqliteLoadFailed = true;
+    console.error('❌ Failed to load sqlite3 module:', sqliteLoadError.message);
+    app.whenReady().then(() => {
+        dialog.showErrorBox(
+            'Missing Dependency: sqlite3',
+            [
+                'The app could not start because the sqlite3 package is missing or was not rebuilt for Electron.',
+                '',
+                'From the project folder, run:',
+                '  npm install',
+                '  npm run rebuild:electron',
+                '',
+                'Then run: npm start'
+            ].join('\n')
+        );
+        app.quit();
+    });
+}
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -405,6 +428,10 @@ function upsertBookRecord(book) {
  * Application startup sequence
  */
 app.whenReady().then(async () => {
+    if (sqliteLoadFailed) {
+        return;
+    }
+
     console.log('🚀 Starting Kids Library Checkout Application...');
     
     try {
