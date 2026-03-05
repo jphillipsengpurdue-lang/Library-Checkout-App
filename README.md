@@ -44,8 +44,9 @@ Yes — you can generate a proper installer now.
 
 ### Fastest way (double-click)
 1. On a Windows machine, double-click `BUILD_WINDOWS_INSTALLER.bat`.
-2. Wait for build to finish.
-3. Find installer in `dist/` (example: `Library Checkout App-Setup-1.0.0.exe`).
+2. A console window will stay open and show progress (install/rebuild/build).
+3. When done, it automatically opens the `dist/` folder.
+4. If something fails, check `build-installer.log` in the project root.
 
 ### CLI way
 ```bash
