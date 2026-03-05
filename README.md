@@ -13,7 +13,13 @@ An educational Electron app that helps kids manage library books while learning 
 ```bash
 npm install
 npm start
+```
 
+If startup reports `Cannot find module 'sqlite3'`, run:
+```bash
+npm install
+npm run rebuild:electron
+```
 
 ## Local Network (BGC) Deployment
 For sharing one database across devices in the same building, see:

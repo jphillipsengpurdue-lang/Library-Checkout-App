@@ -10,7 +10,8 @@
     "start:server": "node lan-server.js",
     "dist:win": "electron-builder --win nsis",
     "dist:win:portable": "electron-builder --win portable",
-    "rebuild:electron": "electron-builder install-app-deps"
+    "rebuild:electron": "electron-builder install-app-deps",
+    "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [
     "library",
