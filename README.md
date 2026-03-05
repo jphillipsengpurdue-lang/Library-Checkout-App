@@ -2,6 +2,9 @@
 
 An educational Electron app that helps kids manage library books while learning to code.
 
+## Abstract
+The Kids Library Checkout App is a desktop-based library management system designed for youth learning environments, such as school and community reading programs. Built with Electron, it combines practical library operations—book search, checkout/return workflows, and role-based account access—with an educational interface that helps students understand how software works through source code visibility. The project emphasizes accessibility and real-world deployment: it supports local single-device use, shared local-network hosting for multi-device scenarios, and one-click Windows setup/build scripts for volunteers and non-technical facilitators. Overall, the application serves a dual purpose as both an operational tool for organizing books and a hands-on introduction to applied coding in a familiar, literacy-focused context.
+
 ## Features
 - Book search using Google Books API
 - User authentication (students & admins)
