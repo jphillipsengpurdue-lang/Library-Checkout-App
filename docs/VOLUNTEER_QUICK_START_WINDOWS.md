@@ -40,3 +40,8 @@ Installer option (recommended for distribution)
 - Admin can build a standard Windows installer by running `BUILD_WINDOWS_INSTALLER.bat`.
 - Share the generated `.exe` from the `dist` folder with volunteers.
 - Volunteers then install by double-clicking installer and following wizard prompts.
+
+
+If you see "Could not locate the bindings file" (sqlite3)
+- Run `ONE_CLICK_SETUP.bat` again on that device.
+- The setup now rebuilds Electron native modules automatically.

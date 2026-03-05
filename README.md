@@ -36,7 +36,7 @@ See full instructions in `docs/LOCAL_NETWORK_DEPLOYMENT.md`.
 3. Type `HOST` (for the host machine) or `CLIENT` (for regular devices).
 4. Use the desktop shortcut created by setup.
 
-The setup script auto-installs Node.js LTS (via winget) if needed and installs app dependencies.
+The setup script auto-installs Node.js LTS (via winget), installs app dependencies, and rebuilds Electron native modules (sqlite3) automatically.
 
 
 ## Build a Windows .exe Installer
@@ -54,3 +54,6 @@ npm run dist:win
 ```
 
 This uses NSIS via `electron-builder` and creates an install wizard (.exe), desktop shortcut, and Start Menu entry.
+
+
+If you hit `Could not locate the bindings file` (sqlite3), run `ONE_CLICK_SETUP.bat` again to trigger native module rebuild for Electron.

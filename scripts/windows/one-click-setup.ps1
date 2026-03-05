@@ -54,6 +54,19 @@ function Ensure-NpmPackages($repoRoot) {
     Write-Ok "Dependencies installed"
 }
 
+
+function Ensure-ElectronNativeModules($repoRoot) {
+    Write-Info "Rebuilding native modules for Electron (fixes sqlite3 binding errors)..."
+    Push-Location $repoRoot
+    try {
+        npm run rebuild:electron
+    }
+    finally {
+        Pop-Location
+    }
+    Write-Ok "Electron native modules ready"
+}
+
 function New-DesktopShortcut($name, $targetPath, $arguments, $workingDir) {
     $desktop = [Environment]::GetFolderPath('Desktop')
     $shortcutPath = Join-Path $desktop "$name.lnk"
@@ -85,6 +98,8 @@ function Setup-Host($repoRoot) {
 set LIBRARY_DB_PATH=$dbPath
 set LIBRARY_SERVER_PORT=$port
 cd /d "$repoRoot"
+npm run rebuild:electron
+if errorlevel 1 goto :eof
 npm run start:server
 pause
 "@ | Set-Content -Path $batPath -Encoding ASCII
@@ -103,6 +118,8 @@ function Setup-Client($repoRoot) {
 @echo off
 set LIBRARY_SERVER_URL=$serverUrl
 cd /d "$repoRoot"
+npm run rebuild:electron
+if errorlevel 1 goto :eof
 npm start
 "@ | Set-Content -Path $batPath -Encoding ASCII
 
@@ -119,6 +136,7 @@ Write-Info "Using app folder: $repoRoot"
 
 Ensure-Node
 Ensure-NpmPackages -repoRoot $repoRoot
+Ensure-ElectronNativeModules -repoRoot $repoRoot
 
 $mode = Read-Host "Type HOST or CLIENT"
 if ($mode -match '^(HOST|H)$') {

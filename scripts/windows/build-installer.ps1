@@ -15,6 +15,9 @@ try {
     Write-Info "Installing dependencies..."
     npm install
 
+    Write-Info "Rebuilding native modules for Electron..."
+    npm run rebuild:electron
+
     Write-Info "Building Windows installer (.exe)..."
     npm run dist:win
 
