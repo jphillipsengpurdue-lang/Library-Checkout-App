@@ -3,21 +3,21 @@ setlocal
 cd /d "%~dp0"
 
 echo ===============================================
-echo Building Library Checkout Windows Installer...
+echo Building Library Checkout Portable App EXE...
 echo ===============================================
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\build-installer.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\build-portable.ps1"
 set EXIT_CODE=%ERRORLEVEL%
 
 echo.
 if %EXIT_CODE%==0 (
-  echo [SUCCESS] Installer build finished.
+  echo [SUCCESS] Portable EXE build finished.
   echo A dist folder window should open automatically.
-  echo Build log: %CD%\build-installer.log
+  echo Build log: %CD%\build-portable.log
 ) else (
-  echo [FAILED] Installer build failed.
-  echo Check log: %CD%\build-installer.log
+  echo [FAILED] Portable EXE build failed.
+  echo Check log: %CD%\build-portable.log
 )
 
 echo.

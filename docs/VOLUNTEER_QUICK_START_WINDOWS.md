@@ -45,3 +45,8 @@ Installer option (recommended for distribution)
 If you see "Could not locate the bindings file" (sqlite3)
 - Run `ONE_CLICK_SETUP.bat` again on that device.
 - The setup now rebuilds Electron native modules automatically.
+
+
+Portable app EXE option
+- If you do not want an installer wizard, admins can run `BUILD_WINDOWS_APP_EXE.bat`.
+- Share the generated portable `.exe` from `dist` for quick app launch.

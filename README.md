@@ -39,7 +39,7 @@ See full instructions in `docs/LOCAL_NETWORK_DEPLOYMENT.md`.
 The setup script auto-installs Node.js LTS (via winget), installs app dependencies, and rebuilds Electron native modules (sqlite3) automatically.
 
 
-## Build a Windows .exe Installer
+## Build a Windows .exe Installer (Setup Wizard)
 Yes — you can generate a proper installer now.
 
 ### Fastest way (double-click)
@@ -58,3 +58,15 @@ This uses NSIS via `electron-builder` and creates an install wizard (.exe), desk
 
 
 If you hit `Could not locate the bindings file` (sqlite3), run `ONE_CLICK_SETUP.bat` again to trigger native module rebuild for Electron.
+
+
+## Build a Windows App .exe (No Installer)
+If you want a direct app `.exe` file (with icon) for quick access:
+
+### Fastest way (double-click)
+1. Double-click `BUILD_WINDOWS_APP_EXE.bat`.
+2. Wait for completion.
+3. `dist/` opens automatically with the portable app `.exe`.
+4. If it fails, check `build-portable.log`.
+
+This creates a portable executable (no install wizard required).
