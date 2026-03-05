@@ -264,8 +264,14 @@ async function register() {
  * LOGOUT: Clear user session and return to login screen
  */
 function logout() {
+    const hadActiveSession = Boolean(activeReadingSession);
+
     currentUser = null;
     showSection('loginSection');
+
+    if (hadActiveSession) {
+        showMessage('readingStatus', 'Reading timer is still running in the background and will auto-stop after 4 hours.', 'info');
+    }
 }
 
 // =============================================================================
@@ -1391,9 +1397,13 @@ window.adminReturnBook = async function(checkoutId, buttonElement = null) {
 let activeReadingSession = null;
 let readingStartTime = null;
 let readingInterval = null;
+let autoStopTimeout = null;
+const MAX_READING_DURATION_MS = 4 * 60 * 60 * 1000;
 
 // Update stopwatch display
 function updateStopwatch() {
+    if (!readingStartTime) return;
+
     const now = Date.now();
     const elapsedMs = now - readingStartTime;
     const sec = Math.floor(elapsedMs / 1000) % 60;
@@ -1401,6 +1411,33 @@ function updateStopwatch() {
 
     document.getElementById('readingResults').innerHTML =
         `<p><strong>Timer:</strong> ${min}m ${sec}s</p>`;
+}
+
+function clearReadingTimers() {
+    if (readingInterval) {
+        clearInterval(readingInterval);
+        readingInterval = null;
+    }
+
+    if (autoStopTimeout) {
+        clearTimeout(autoStopTimeout);
+        autoStopTimeout = null;
+    }
+}
+
+function scheduleReadingAutoStop() {
+    if (!readingStartTime || !activeReadingSession) return;
+
+    if (autoStopTimeout) {
+        clearTimeout(autoStopTimeout);
+    }
+
+    const elapsedMs = Date.now() - readingStartTime;
+    const remainingMs = Math.max(MAX_READING_DURATION_MS - elapsedMs, 0);
+
+    autoStopTimeout = setTimeout(() => {
+        stopReadingTimer(true);
+    }, remainingMs);
 }
 
 async function startReadingTimer() {
@@ -1421,6 +1458,7 @@ async function startReadingTimer() {
         console.log("SESSION ID WE SAVED:", activeReadingSession);
         // Start stopwatch
         readingInterval = setInterval(updateStopwatch, 1000);
+        scheduleReadingAutoStop();
 
         showMessage('readingStatus', '⏱️ Reading session started!', 'success');
         document.getElementById('startReadingBtn').style.display = 'none';
@@ -1440,8 +1478,7 @@ let pausedAt = null;
 function pauseReadingTimer() {
     if (!readingInterval) return;
 
-    clearInterval(readingInterval);
-    readingInterval = null;
+    clearReadingTimers();
     isPaused = true;
     pausedAt = Date.now();
 
@@ -1460,6 +1497,7 @@ function resumeReadingTimer() {
     readingStartTime += pausedDuration;
 
     readingInterval = setInterval(updateStopwatch, 1000);
+    scheduleReadingAutoStop();
 
     isPaused = false;
     pausedAt = null;
@@ -1469,7 +1507,7 @@ function resumeReadingTimer() {
     document.getElementById('resumeReadingBtn').style.display = 'none';
     document.getElementById('pauseReadingBtn').style.display = 'inline-block';
 }
-async function stopReadingTimer() {
+async function stopReadingTimer(autoStopped = false) {
     console.log("STOP BUTTON CLICKED");
 
     if (!activeReadingSession) {
@@ -1477,8 +1515,8 @@ async function stopReadingTimer() {
         return;
     }
 
-    // Stop stopwatch
-    clearInterval(readingInterval);
+    // Stop stopwatch and auto-stop watcher
+    clearReadingTimers();
 
     // Read pages from the input box
     const pg = parseInt(document.getElementById('pagesReadInput').value || "0");
@@ -1488,7 +1526,10 @@ async function stopReadingTimer() {
     console.log("RESULT FROM BACKEND:", result);
 
     if (result.success) {
-        showMessage('readingStatus', '📘 Reading session saved!', 'success');
+        const statusMessage = autoStopped
+            ? '⏹️ Reading session auto-stopped after 4 hours and saved.'
+            : '📘 Reading session saved!';
+        showMessage('readingStatus', statusMessage, 'success');
         document.getElementById('readingResults').innerHTML +=
             `<p><strong>Session saved.</strong> Pages read: ${pg}</p>`;
     } else {
