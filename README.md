@@ -46,7 +46,6 @@ The setup script auto-installs Node.js LTS (via winget), installs app dependenci
 
 
 ## Build a Windows .exe Installer (Setup Wizard)
-Yes — you can generate a proper installer now.
 
 ### Fastest way (double-click)
 1. On a Windows machine, double-click `BUILD_WINDOWS_INSTALLER.bat`.
