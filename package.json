@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "start:server": "node lan-server.js"
   },
   "keywords": [
     "library",
@@ -24,7 +25,8 @@
   },
   "dependencies": {
     "sql.js": "^1.8.0",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "express": "^4.21.2"
   },
   "build": {
     "appId": "org.nonprofit.library-checkout",
