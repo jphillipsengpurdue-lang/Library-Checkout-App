@@ -5,8 +5,17 @@ function Write-Ok($msg) { Write-Host "[OK]   $msg" -ForegroundColor Green }
 function Write-Warn($msg) { Write-Host "[WARN] $msg" -ForegroundColor Yellow }
 
 function Get-RepoRoot {
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-    return (Resolve-Path (Join-Path $scriptDir "..\.."))
+    if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
+        return (Resolve-Path (Join-Path $PSScriptRoot "..\.."))
+    }
+
+    if ($MyInvocation -and $MyInvocation.MyCommand -and $MyInvocation.MyCommand.Path) {
+        $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+        return (Resolve-Path (Join-Path $scriptDir "..\.."))
+    }
+
+    # Final fallback: assume script is run from repository root
+    return (Resolve-Path (Get-Location))
 }
 
 function Ensure-Node {
