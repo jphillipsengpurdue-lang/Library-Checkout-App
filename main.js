@@ -25,6 +25,10 @@ let db;
 let mainWindow;
 
 const PASSWORD_MIN_LENGTH = 6;
+const MAX_READING_DURATION_HOURS = 4;
+const READING_SESSION_SWEEP_MS = 60 * 1000;
+
+let readingSessionSweepInterval = null;
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
     const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
@@ -48,6 +52,38 @@ function verifyPassword(plainPassword, storedPassword) {
 
 function isLegacyPlaintextPassword(storedPassword = '') {
     return !storedPassword.startsWith('pbkdf2$');
+}
+
+
+function autoEndExpiredReadingSessions() {
+    if (!db) return;
+
+    db.run(
+        `UPDATE reading_sessions
+         SET end_time = datetime(start_time, '+${MAX_READING_DURATION_HOURS} hours'),
+             duration_minutes = ${MAX_READING_DURATION_HOURS * 60}
+         WHERE end_time IS NULL
+           AND datetime(start_time, '+${MAX_READING_DURATION_HOURS} hours') <= CURRENT_TIMESTAMP`,
+        function (err) {
+            if (err) {
+                console.error('❌ Error auto-ending expired reading sessions:', err.message);
+                return;
+            }
+
+            if (this.changes > 0) {
+                console.log(`⏱️ Auto-ended ${this.changes} expired reading session(s)`);
+            }
+        }
+    );
+}
+
+function startReadingSessionSweeper() {
+    if (readingSessionSweepInterval) {
+        clearInterval(readingSessionSweepInterval);
+    }
+
+    autoEndExpiredReadingSessions();
+    readingSessionSweepInterval = setInterval(autoEndExpiredReadingSessions, READING_SESSION_SWEEP_MS);
 }
 
 /**
@@ -356,6 +392,7 @@ app.whenReady().then(async () => {
         // Initialize database first
         await initializeDatabase();
         console.log('✅ Database ready');
+        startReadingSessionSweeper();
         
         // Then create the window
         createWindow();
@@ -1105,9 +1142,17 @@ ipcMain.handle('start-reading-session', async (event, { userId, bookTitle = '' }
 ipcMain.handle('end-reading-session', async (event, { sessionId, pagesRead = 0 }) => {
     return new Promise((resolve, reject) => {
         db.run(
-            `UPDATE reading_sessions 
-             SET end_time = CURRENT_TIMESTAMP,
-                 duration_minutes = ROUND((JULIANDAY(CURRENT_TIMESTAMP) - JULIANDAY(start_time)) * 24 * 60),
+            `UPDATE reading_sessions
+             SET end_time = CASE
+                     WHEN datetime(start_time, '+${MAX_READING_DURATION_HOURS} hours') < CURRENT_TIMESTAMP
+                     THEN datetime(start_time, '+${MAX_READING_DURATION_HOURS} hours')
+                     ELSE CURRENT_TIMESTAMP
+                 END,
+                 duration_minutes = CASE
+                     WHEN ROUND((JULIANDAY(CURRENT_TIMESTAMP) - JULIANDAY(start_time)) * 24 * 60) > ${MAX_READING_DURATION_HOURS * 60}
+                     THEN ${MAX_READING_DURATION_HOURS * 60}
+                     ELSE ROUND((JULIANDAY(CURRENT_TIMESTAMP) - JULIANDAY(start_time)) * 24 * 60)
+                 END,
                  pages_read = ?
              WHERE id = ? AND end_time IS NULL`,
             [pagesRead, sessionId],
@@ -1188,3 +1233,10 @@ ipcMain.handle('get-reading-stats', async (event, userId) => {
 });
 
 console.log('✅ Main process loaded successfully');
+
+app.on('before-quit', () => {
+    if (readingSessionSweepInterval) {
+        clearInterval(readingSessionSweepInterval);
+        readingSessionSweepInterval = null;
+    }
+});
