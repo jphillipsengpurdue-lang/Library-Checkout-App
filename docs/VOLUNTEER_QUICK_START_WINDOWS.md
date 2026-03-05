@@ -34,3 +34,9 @@ What volunteers do NOT need to do
 - They do not need to manually install Node.js.
 - They do not need to run terminal commands.
 - They do not need to edit files.
+
+
+Installer option (recommended for distribution)
+- Admin can build a standard Windows installer by running `BUILD_WINDOWS_INSTALLER.bat`.
+- Share the generated `.exe` from the `dist` folder with volunteers.
+- Volunteers then install by double-clicking installer and following wizard prompts.

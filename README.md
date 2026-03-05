@@ -37,3 +37,20 @@ See full instructions in `docs/LOCAL_NETWORK_DEPLOYMENT.md`.
 4. Use the desktop shortcut created by setup.
 
 The setup script auto-installs Node.js LTS (via winget) if needed and installs app dependencies.
+
+
+## Build a Windows .exe Installer
+Yes — you can generate a proper installer now.
+
+### Fastest way (double-click)
+1. On a Windows machine, double-click `BUILD_WINDOWS_INSTALLER.bat`.
+2. Wait for build to finish.
+3. Find installer in `dist/` (example: `Library Checkout App-Setup-1.0.0.exe`).
+
+### CLI way
+```bash
+npm install
+npm run dist:win
+```
+
+This uses NSIS via `electron-builder` and creates an install wizard (.exe), desktop shortcut, and Start Menu entry.
