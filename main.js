@@ -30,6 +30,25 @@ const READING_SESSION_SWEEP_MS = 60 * 1000;
 
 let readingSessionSweepInterval = null;
 
+
+const DEFAULT_DB_FILENAME = 'library.db';
+
+function resolveDatabasePath() {
+    const configuredPath = process.env.LIBRARY_DB_PATH;
+    if (!configuredPath || !configuredPath.trim()) {
+        return path.join(__dirname, DEFAULT_DB_FILENAME);
+    }
+
+    const absolutePath = path.isAbsolute(configuredPath)
+        ? configuredPath
+        : path.resolve(process.cwd(), configuredPath);
+
+    const dbDir = path.dirname(absolutePath);
+    fs.mkdirSync(dbDir, { recursive: true });
+    return absolutePath;
+}
+
+
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
     const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
     return `pbkdf2$${salt}$${hash}`;
@@ -114,7 +133,7 @@ function createWindow() {
 function initializeDatabase() {
     return new Promise((resolve, reject) => {
         try {
-            const dbPath = path.join(__dirname, 'library.db');
+            const dbPath = resolveDatabasePath();
             console.log('📁 Database path:', dbPath);
             
             // Create or open the database file
