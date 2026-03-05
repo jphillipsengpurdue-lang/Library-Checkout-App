@@ -6,7 +6,11 @@
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "start:server": "node lan-server.js",
+    "dist:win": "electron-builder --win nsis",
+    "dist:win:portable": "electron-builder --win portable",
+    "rebuild:electron": "electron-builder install-app-deps"
   },
   "keywords": [
     "library",
@@ -24,7 +28,8 @@
   },
   "dependencies": {
     "sql.js": "^1.8.0",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "express": "^4.21.2"
   },
   "build": {
     "appId": "org.nonprofit.library-checkout",
@@ -38,6 +43,26 @@
       "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
       "!**/node_modules/*.d.ts",
       "!**/.*"
-    ]
+    ],
+    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icons/book_2_24dp_EE7B2F_FILL0_wght400_GRAD0_opsz24.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Library Checkout App"
+    }
   }
 }
