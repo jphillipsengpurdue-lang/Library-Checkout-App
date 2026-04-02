@@ -1,12 +1,49 @@
 # Library Checkout App - Setup Guide
 
 ## Prerequisites
-- Node.js (version 16 or higher)
+- Node.js 18 or higher
 - npm (comes with Node.js)
 
-## Installation Steps
-
-1. **Create Project Folder**
+## Standard Local Setup (Desktop)
+1. Open a terminal in the project folder.
+2. Install dependencies:
    ```bash
-   mkdir library-checkout-app
-   cd library-checkout-app
+   npm install
+   ```
+3. Start the app:
+   ```bash
+   npm start
+   ```
+
+If startup reports `Cannot find module 'sqlite3'`, run:
+```bash
+npm install
+npm run rebuild:electron
+npm start
+```
+
+## ChromeOS Setup (Single Device, No Server)
+Use this when running on one Chromebook only and you do not want LAN/server hosting.
+
+1. Enable **Linux development environment** (Crostini) on the Chromebook.
+2. Copy this project folder into Linux files.
+3. In the project folder, run:
+   ```bash
+   chmod +x ONE_CLICK_SETUP_CHROMEOS.sh START_LIBRARY.sh scripts/chromeos/one-click-setup.sh
+   ./ONE_CLICK_SETUP_CHROMEOS.sh
+   ```
+
+Notes:
+- This runs the app locally with a local SQLite database file.
+- You do not need `npm run start:server` for single-device local use.
+- Windows installer flow is separate and does not apply on ChromeOS.
+- The setup creates one consolidated starter script: `START_LIBRARY.sh`.
+
+Daily launch command:
+```bash
+./START_LIBRARY.sh
+```
+
+## Using the App
+- Normal user guide: `USER_GUIDE.md`
+- Admin guide: `ADMIN_GUIDE.md`

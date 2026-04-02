@@ -24,6 +24,34 @@ npm install
 npm run rebuild:electron
 ```
 
+## ChromeOS (Single Device, No Server)
+If you want to run this app on one Chromebook only (with no LAN/server hosting), use the Linux environment on ChromeOS (Crostini).
+
+### One-click setup
+1. Enable **Linux development environment** on the Chromebook.
+2. Copy this project folder into Linux files.
+3. In a Linux terminal, run:
+
+```bash
+chmod +x ONE_CLICK_SETUP_CHROMEOS.sh START_LIBRARY.sh scripts/chromeos/one-click-setup.sh
+./ONE_CLICK_SETUP_CHROMEOS.sh
+```
+
+Notes:
+- This runs the app locally on that one device with the local SQLite database file.
+- You do **not** need to run `npm run start:server` for this setup.
+- Windows installer flows do not apply on ChromeOS.
+- The setup creates one consolidated starter script: `START_LIBRARY.sh`.
+
+### Daily launch (single starter)
+```bash
+./START_LIBRARY.sh
+```
+
+## Usage Guides
+- For students/readers (normal users): `docs/USER_GUIDE.md`
+- For administrators: `docs/ADMIN_GUIDE.md`
+
 ## Local Network (BGC) Deployment
 For sharing one database across devices in the same building, see:
 - `docs/LOCAL_NETWORK_DEPLOYMENT.md`
@@ -39,24 +67,7 @@ You can override the database location with environment variable `LIBRARY_DB_PAT
 See full instructions in `docs/LOCAL_NETWORK_DEPLOYMENT.md`.
 
 
-## One-Click Setup for Volunteers (Windows)
-1. Download this repository as ZIP and extract it.
-2. Double-click `ONE_CLICK_SETUP.bat`.
-3. Type `HOST` (for the host machine) or `CLIENT` (for regular devices).
-4. Use the desktop shortcut created by setup.
-
-The setup script auto-installs Node.js LTS (via winget), installs app dependencies, and rebuilds Electron native modules (sqlite3) automatically.
-
-
-## Build a Windows .exe Installer (Setup Wizard)
-
-### Fastest way (double-click)
-1. On a Windows machine, double-click `BUILD_WINDOWS_INSTALLER.bat`.
-2. A console window will stay open and show progress (install/rebuild/build).
-3. When done, it automatically opens the `dist/` folder.
-4. If something fails, check `build-installer.log` in the project root.
-
-### CLI way
+## Build a Windows .exe Installer (CLI)
 ```bash
 npm install
 npm run dist:win
@@ -64,17 +75,8 @@ npm run dist:win
 
 This uses NSIS via `electron-builder` and creates an install wizard (.exe), desktop shortcut, and Start Menu entry.
 
-
-If you hit `Could not locate the bindings file` (sqlite3), run `ONE_CLICK_SETUP.bat` again to trigger native module rebuild for Electron.
-
-
-## Build a Windows App .exe (No Installer)
-If you want a direct app `.exe` file (with icon) for quick access:
-
-### Fastest way (double-click)
-1. Double-click `BUILD_WINDOWS_APP_EXE.bat`.
-2. Wait for completion.
-3. `dist/` opens automatically with the portable app `.exe`.
-4. If it fails, check `build-portable.log`.
-
-This creates a portable executable (no install wizard required).
+If you hit `Could not locate the bindings file` (sqlite3), run:
+```bash
+npm install
+npm run rebuild:electron
+```

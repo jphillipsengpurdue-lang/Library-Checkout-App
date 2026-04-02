@@ -18,7 +18,7 @@ if (Test-Path $logPath) {
 Push-Location $repoRoot
 try {
     if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-        throw "Node.js is required to build app EXE. Run ONE_CLICK_SETUP.bat first."
+        throw "Node.js is required to build app EXE. Run scripts/windows/one-click-setup.ps1 first."
     }
 
     Write-Info "Installing dependencies..."
