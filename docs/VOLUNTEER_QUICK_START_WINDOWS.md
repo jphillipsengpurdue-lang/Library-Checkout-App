@@ -10,14 +10,17 @@ Steps (Client device)
 1) Download project ZIP from GitHub.
 2) Right-click ZIP -> Extract All.
 3) Open extracted folder.
-4) Double-click `ONE_CLICK_SETUP.bat`.
-5) When asked, type `CLIENT`.
-6) When asked for server URL, paste the URL from staff.
-7) Wait until it says setup finished.
-8) Use the desktop icon: `Library Checkout`.
+4) Right-click in the folder and open terminal (PowerShell).
+5) Run:
+   `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\one-click-setup.ps1`
+6) When asked, type `CLIENT`.
+7) When asked for server URL, paste the URL from staff.
+8) Wait until it says setup finished.
+9) Use the desktop icon: `Library Checkout`.
 
 Steps (Host device - staff/admin only)
-1) Double-click `ONE_CLICK_SETUP.bat`.
+1) In PowerShell, run:
+   `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\one-click-setup.ps1`
 2) Type `HOST`.
 3) Accept defaults unless staff wants custom path/port.
 4) Use desktop icon: `Library Checkout - Host Server`.
@@ -37,16 +40,16 @@ What volunteers do NOT need to do
 
 
 Installer option (recommended for distribution)
-- Admin can build a standard Windows installer by running `BUILD_WINDOWS_INSTALLER.bat`.
+- Admin can build a standard Windows installer by running `npm run dist:win`.
 - Share the generated `.exe` from the `dist` folder with volunteers.
 - Volunteers then install by double-clicking installer and following wizard prompts.
 
 
 If you see "Could not locate the bindings file" (sqlite3)
-- Run `ONE_CLICK_SETUP.bat` again on that device.
+- Run the PowerShell setup script again on that device.
 - The setup now rebuilds Electron native modules automatically.
 
 
 Portable app EXE option
-- If you do not want an installer wizard, admins can run `BUILD_WINDOWS_APP_EXE.bat`.
+- If you do not want an installer wizard, admins can run `npm run dist:win:portable`.
 - Share the generated portable `.exe` from `dist` for quick app launch.

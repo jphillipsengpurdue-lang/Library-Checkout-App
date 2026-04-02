@@ -76,6 +76,6 @@ Security
 
 
 One-click option (recommended for volunteers)
-- Use `ONE_CLICK_SETUP.bat` in the repo root.
+- Run PowerShell setup script: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\one-click-setup.ps1`
 - It auto-installs Node.js LTS (if missing), installs dependencies, and creates desktop shortcuts.
 - Volunteers should follow `docs/VOLUNTEER_QUICK_START_WINDOWS.md`.
